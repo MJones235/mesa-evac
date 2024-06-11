@@ -3,7 +3,6 @@ import mesa_geo as mg
 from shapely.geometry import Point
 import pyproj
 import numpy as np
-import igraph
 
 from src.agent.building import Building
 from src.agent.evacuation_zone import EvacuationZone
@@ -28,6 +27,7 @@ class Evacuee(mg.GeoAgent):
     home: Building
     work: Building
     school: Building
+    evacuation_delay: float
 
     speed: float
 
@@ -47,12 +47,13 @@ class Evacuee(mg.GeoAgent):
         self.end_time_h = self.start_time_h + 8
         self.end_time_m = np.random.randint(0, 12) * 5
 
-        self.staus = "home"
+        self.staus = "work"
         self.destination = work
         self.origin = self.model.space.get_building_by_id(self.home.unique_id)
         self.route = []
         self.route_index = 0
         self.distance_along_edge = 0
+        self.evacuation_delay = self._response_time()
 
     def step(self) -> None:
         self._prepare_to_move()
@@ -78,48 +79,41 @@ class Evacuee(mg.GeoAgent):
         self._path_select((exit.geometry.x, exit.geometry.y))
 
     def _prepare_to_move(self) -> None:
-        if self.model.evacuating:
+        if self.model.evacuating and self.status != "evacuating":
             if (
-                self.status != "evacuating"
+                self.model.evacuation_duration > self.evacuation_delay
                 and self.model.space.evacuation_zone.geometry.contains(self.geometry)
             ):
                 self._evacuate()
+            else:
+                self.status = "waiting to evacuate"
 
-            elif self.status == "evacuated":
-                dest = self.destination
+        elif self.model.evacuating and self.status == "transport":
+            dest = self.destination
 
-                while self.model.space.evacuation_zone.geometry.contains(
-                    Point(dest.entrance_pos)
-                ):
-                    dest = self.model.space.get_random_home()
-                self.destination = dest
-                self._path_select(self.destination.entrance_pos)
-
-        else:
-            if (
-                self.status == "home"
-                and self.model.hour == self.start_time_h
-                and self.model.minute == self.start_time_m
+            while self.model.space.evacuation_zone.geometry.contains(
+                Point(dest.entrance_pos)
             ):
-                self.origin = self.model.space.get_building_by_id(self.home.unique_id)
-                self.model.space.move_evacuee(self, pos=self.origin.centroid)
-                self.destination = self.model.space.get_building_by_id(
-                    self.work.unique_id
-                )
-                self._path_select(self.destination.entrance_pos)
-                self.status = "transport"
-            elif (
-                self.status == "work"
-                and self.model.hour == self.end_time_h
-                and self.model.minute == self.end_time_m
-            ):
-                self.origin = self.model.space.get_building_by_id(self.work.unique_id)
-                self.model.space.move_evacuee(self, pos=self.origin.centroid)
-                self.destination = self.model.space.get_building_by_id(
-                    self.home.unique_id
-                )
-                self._path_select(self.destination.entrance_pos)
-                self.status = "transport"
+                dest = self.model.space.get_random_home()
+            self.destination = dest
+            self._path_select(self.destination.entrance_pos)
+
+        elif (
+            self.status == "home"
+            and self.model.hour == self.start_time_h
+            and self.model.minute == self.start_time_m
+        ):
+            self.destination = self.model.space.get_building_by_id(self.work.unique_id)
+            self._path_select(self.destination.entrance_pos)
+            self.status = "transport"
+        elif (
+            self.status == "work"
+            and self.model.hour == self.end_time_h
+            and self.model.minute == self.end_time_m
+        ):
+            self.destination = self.model.space.get_building_by_id(self.home.unique_id)
+            self._path_select(self.destination.entrance_pos)
+            self.status = "transport"
 
     def _update_location(self):
         origin_node = self.model.roads.nodes.iloc[self.route[self.route_index]]
@@ -173,8 +167,7 @@ class Evacuee(mg.GeoAgent):
                     # if target is reacheds
                     if self.route_index == len(self.route) - 1:
                         if self.status == "evacuating":
-                            self._path_select(self.destination.entrance_pos)
-                            self.status = "evacuated"
+                            self.status = "transport"
                         elif self.status == "transport":
                             if self.destination == self.work:
                                 self.status = "work"
@@ -198,23 +191,9 @@ class Evacuee(mg.GeoAgent):
 
     def _path_select(self, destination: mesa.space.FloatCoordinate) -> None:
         self.route_index = 0
-        if (
-            cached_path := self.model.roads.get_cached_path(
-                source=(self.geometry.x, self.geometry.y),
-                target=destination,
-            )
-        ) is not None:
-            self.route = cached_path
-        else:
-            self.route = self.model.roads.get_shortest_path(
-                source=(self.geometry.x, self.geometry.y),
-                target=destination,
-            )
-            self.model.roads.cache_path(
-                source=(self.geometry.x, self.geometry.y),
-                target=destination,
-                path=self.route,
-            )
+        self.route = self.model.roads.shortest_path(
+            origin=(self.geometry.x, self.geometry.y), destination=destination
+        )
 
     def _distance_to_next_node(self) -> float:
         origin_node = self.model.roads.nodes.iloc[self.route[self.route_index]]
@@ -226,6 +205,6 @@ class Evacuee(mg.GeoAgent):
         )[0]
         return edge["length"] - self.distance_along_edge
 
-    def _response_time(self):
+    def _response_time(self) -> float:
         t = np.random.normal(300, 120)
-        return t if t > 0 else 0
+        return t if t > 0 else 0.0

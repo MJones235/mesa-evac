@@ -165,3 +165,28 @@ class CityRoads(RoadNetwork):
             df.geometry.iloc[1].y,
             df.geometry.iloc[1].x,
         )
+
+    def shortest_path(
+        self,
+        origin: mesa.space.FloatCoordinate,
+        destination: mesa.space.FloatCoordinate,
+    ) -> list[mesa.space.FloatCoordinate]:
+        self.route_index = 0
+        if (
+            cached_path := self.get_cached_path(
+                source=origin,
+                target=destination,
+            )
+        ) is not None:
+            return cached_path
+        else:
+            route = self.get_shortest_path(
+                source=origin,
+                target=destination,
+            )
+            self.cache_path(
+                source=origin,
+                target=destination,
+                path=route,
+            )
+            return route

@@ -45,6 +45,8 @@ class EvacuationModel(mesa.Model):
     evacuating: bool
     agent_data: pd.DataFrame
 
+    evacuation_duration: int
+
     def __init__(
         self,
         city: str,
@@ -85,10 +87,14 @@ class EvacuationModel(mesa.Model):
         self.bomb_location = bomb_location
         self.evacuation_zone_radius = evacuation_zone_radius
         self.evacuating = False
+        self.evacuation_duration = 0
         self.datacollector.collect(self)
 
     def step(self) -> None:
         self._update_clock()
+
+        if self.evacuating:
+            self.evacuation_duration += 10
 
         if (
             self.day == 0
