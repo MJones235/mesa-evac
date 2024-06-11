@@ -3,9 +3,11 @@ import mesa_geo as mg
 import geopandas as gpd
 import osmnx as ox
 import matplotlib.pyplot as plt
-from shapely import Polygon, Point
+from shapely import Polygon, Point, buffer
 from geopandas import GeoDataFrame
 import uuid
+import pointpats
+import random
 
 from src.agent.building import (
     Building,
@@ -41,16 +43,20 @@ class EvacuationModel(mesa.Model):
     evacuation_start_h: int
     evacuation_start_m: int
     evacuating: bool
+    agent_data: pd.DataFrame
 
     def __init__(
         self,
         city: str,
         domain_path: str,
+        agent_data_path: str,
         num_agents: int,
         bomb_location: Point,
         evacuation_zone_radius: int,
         evacuation_start_h: int,
         evacuation_start_m: int,
+        simulation_start_h: int,
+        simulation_start_m: int,
         visualise_roads: bool = False,
     ) -> None:
         super().__init__()
@@ -58,6 +64,7 @@ class EvacuationModel(mesa.Model):
         self.space = City(crs="EPSG:27700")
         self.num_agents = num_agents
         self._load_domain_from_file(domain_path)
+        self._load_agent_data_from_file(agent_data_path)
         self._load_buildings()
         self.roads = CityRoads(city, self.domain)
         if visualise_roads:
@@ -65,8 +72,8 @@ class EvacuationModel(mesa.Model):
         self._set_building_entrance()
         self._create_evacuees()
         self.day = 0
-        self.hour = 5
-        self.minute = 58
+        self.hour = simulation_start_h
+        self.minute = simulation_start_m
         self.seconds = 0
         self.datacollector = mesa.DataCollector(
             model_reporters={
@@ -93,8 +100,6 @@ class EvacuationModel(mesa.Model):
             self._create_evacuation_zone(
                 self.bomb_location, self.evacuation_zone_radius
             )
-            for evacuee in self.space.evacuees:
-                evacuee.begin_evacuation(self.space.evacuation_zone)
 
         self.schedule.step()
         self.datacollector.collect(self)
@@ -102,6 +107,9 @@ class EvacuationModel(mesa.Model):
     def _load_domain_from_file(self, domain_path: str) -> None:
         df = gpd.read_file(domain_path).set_crs("EPSG:4326", allow_override=True)
         self.domain = df.geometry[0]
+
+    def _load_agent_data_from_file(self, agent_data_path: str) -> None:
+        self.agent_data = pd.read_csv(agent_data_path)
 
     def _load_buildings(self) -> None:
         def polygon(gdf: GeoDataFrame) -> GeoDataFrame:
@@ -188,16 +196,27 @@ class EvacuationModel(mesa.Model):
             evacuee = Evacuee(
                 unique_id=uuid.uuid4().int,
                 model=self,
-                geometry=Point(random_home.centroid),
+                geometry=self._random_point_in_polygon(random_work.geometry),
                 crs="EPSG:27700",
                 home=random_home,
                 work=random_work,
                 school=random_school,
+                category=random.choices(
+                    population=self.agent_data.code, weights=self.agent_data.proportion
+                )[0],
             )
 
             evacuee.status = "home"
             self.space.add_evacuee(evacuee)
             self.schedule.add(evacuee)
+
+    def _random_point_in_polygon(self, geometry: Polygon):
+        # A buffer is added because the method hangs if the polygon is too small
+        return Point(
+            pointpats.random.poisson(
+                buffer(geometry=geometry, distance=0.000001), size=1
+            )
+        )
 
     def _create_evacuation_zone(self, centre_point: Point, radius: int) -> None:
         evacuation_zone = EvacuationZone(
