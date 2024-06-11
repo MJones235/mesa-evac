@@ -57,16 +57,21 @@ class City(mg.GeoSpace):
         return random.choice(self.work_buildings)
 
     def get_random_recreation(self) -> Building:
-        return random.choice(self.recreation_buildings)
+        return self._get_random_building(self.recreation_buildings)
 
     def get_random_supermarket(self) -> Building:
-        return random.choice(self.supermarkets)
+        return self._get_random_building(self.supermarkets)
 
     def get_random_shop(self) -> Building:
-        return random.choice(self.shops)
+        return self._get_random_building(self.shops)
 
     def get_random_school(self) -> Building:
-        return random.choice(self.schools)
+        return self._get_random_building(self.schools)
+
+    def _get_random_building(self, buildings: tuple[Building]) -> Building:
+        return (
+            random.choice(buildings) if len(buildings) > 0 else self.get_random_work()
+        )
 
     def get_building_by_id(self, unique_id: int) -> Building:
         return self._buildings[unique_id]

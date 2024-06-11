@@ -6,7 +6,6 @@ import matplotlib.pyplot as plt
 from shapely import Polygon, Point, buffer
 from geopandas import GeoDataFrame
 import uuid
-import pointpats
 import random
 
 from src.agent.building import (
@@ -72,18 +71,20 @@ class EvacuationModel(mesa.Model):
         if visualise_roads:
             self._load_roads()
         self._set_building_entrance()
-        self._create_evacuees()
+
         self.day = 0
         self.hour = simulation_start_h
         self.minute = simulation_start_m
         self.seconds = 0
+        self.evacuation_start_h = evacuation_start_h
+        self.evacuation_start_m = evacuation_start_m
+
+        self._create_evacuees()
         self.datacollector = mesa.DataCollector(
             model_reporters={
                 "time": get_time,
             }
         )
-        self.evacuation_start_h = evacuation_start_h
-        self.evacuation_start_m = evacuation_start_m
         self.bomb_location = bomb_location
         self.evacuation_zone_radius = evacuation_zone_radius
         self.evacuating = False
@@ -202,7 +203,6 @@ class EvacuationModel(mesa.Model):
             evacuee = Evacuee(
                 unique_id=uuid.uuid4().int,
                 model=self,
-                geometry=self._random_point_in_polygon(random_work.geometry),
                 crs="EPSG:27700",
                 home=random_home,
                 work=random_work,
@@ -215,14 +215,6 @@ class EvacuationModel(mesa.Model):
             evacuee.status = "home"
             self.space.add_evacuee(evacuee)
             self.schedule.add(evacuee)
-
-    def _random_point_in_polygon(self, geometry: Polygon):
-        # A buffer is added because the method hangs if the polygon is too small
-        return Point(
-            pointpats.random.poisson(
-                buffer(geometry=geometry, distance=0.000001), size=1
-            )
-        )
 
     def _create_evacuation_zone(self, centre_point: Point, radius: int) -> None:
         evacuation_zone = EvacuationZone(

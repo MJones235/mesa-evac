@@ -3,9 +3,16 @@ import mesa_geo as mg
 from shapely.geometry import Point
 import pyproj
 import numpy as np
+from datetime import time
 
 from src.agent.building import Building
-from src.agent.evacuation_zone import EvacuationZone
+
+from src.agent.schedule import (
+    Schedule,
+    ChildSchedule,
+    RetiredAdultSchedule,
+    WorkingAdultSchedule,
+)
 
 
 class Evacuee(mg.GeoAgent):
@@ -28,26 +35,28 @@ class Evacuee(mg.GeoAgent):
     work: Building
     school: Building
     evacuation_delay: float
+    schedule: Schedule
 
     speed: float
 
-    def __init__(
-        self, unique_id, model, geometry, crs, home, work, school, category
-    ) -> None:
-        super().__init__(unique_id, model, geometry, crs)
+    def __init__(self, unique_id, model, crs, home, work, school, category) -> None:
+        self.model = model
         self.home = home
         self.work = work
         self.school = school
 
         self.category = category
         self.speed = self.model.agent_data.iloc[category].walking_speed
+        self._set_schedule()
+        geometry = self._get_start_position()
+
+        super().__init__(unique_id, model, geometry, crs)
 
         self.start_time_h = round(np.random.normal(8, 1))
         self.start_time_m = np.random.randint(0, 12) * 5
         self.end_time_h = self.start_time_h + 8
         self.end_time_m = np.random.randint(0, 12) * 5
 
-        self.staus = "work"
         self.destination = work
         self.origin = self.model.space.get_building_by_id(self.home.unique_id)
         self.route = []
@@ -58,6 +67,20 @@ class Evacuee(mg.GeoAgent):
     def step(self) -> None:
         self._prepare_to_move()
         self._move()
+
+    def _set_schedule(self) -> None:
+        if self.category == 0:
+            self.schedule = ChildSchedule(self)
+        elif self.category == 1:
+            self.schedule = WorkingAdultSchedule(self)
+        elif self.category == 2:
+            self.schedule = RetiredAdultSchedule(self)
+
+    def _get_start_position(self) -> None:
+        (self.schedule_node, position) = self.schedule.start_position(
+            time(hour=self.model.hour, minute=self.model.minute)
+        )
+        return position
 
     def _evacuate(self) -> None:
         self.status = "evacuating"

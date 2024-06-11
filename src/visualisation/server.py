@@ -21,7 +21,7 @@ def agent_draw(agent):
     portrayal["color"] = "Transparent"
     if isinstance(agent, Evacuee):
         portrayal["color"] = "Red"
-        portrayal["radius"] = "2"
+        portrayal["radius"] = "1"
         portrayal["opacity"] = "1"
     if isinstance(agent, EvacuationZone):
         portrayal["opacity"] = "0.5"

@@ -89,6 +89,22 @@ class RoadNetwork:
             weights="length",
         )[0]
 
+    def shortest_path_by_index(
+        self, origin_idx: int, destination_idx: int
+    ) -> tuple[list[int], float]:
+        path = self._i_graph.get_shortest_paths(
+            origin_idx,
+            destination_idx,
+            weights="length",
+        )[0]
+        distance = self.distance_between_nodes(origin_idx, destination_idx)
+        return (path, distance)
+
+    def distance_between_nodes(self, origin_idx: int, destination_idx: int) -> float:
+        return self._i_graph.distances(origin_idx, destination_idx, weights="length")[
+            0
+        ][0]
+
 
 class CityRoads(RoadNetwork):
     city: str
