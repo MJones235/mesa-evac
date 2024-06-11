@@ -16,10 +16,9 @@ def make_parser():
 if __name__ == "__main__":
     args = make_parser().parse_args()
 
-    if args.city == "newcastle-xs":
-        data_file_prefix = "newcastle-xs"
-    if args.city == "newcastle-sm":
-        data_file_prefix = "newcastle-sm"
+    if args.city in ["newcastle-xs", "newcastle-sm", "newcastle-md"]:
+        data_file_prefix = args.city
+
     else:
         raise ValueError("Invalid city name. Choose from [newcastle-xs]")
 
@@ -27,10 +26,16 @@ if __name__ == "__main__":
         "city": data_file_prefix,
         "domain_path": f"data/{data_file_prefix}/domain.gpkg",
         "num_agents": mesa.visualization.Slider(
-            "Number of evacuees", value=50, min_value=10, max_value=150, step=10
+            "Number of evacuees", value=50, min_value=10, max_value=5000, step=10
         ),
         "bomb_location": Point(424860, 564443),
-        "evacuation_zone_radius": 500,
+        "evacuation_zone_radius": mesa.visualization.Slider(
+            "Evacuation zone radius (m)",
+            value=500,
+            min_value=100,
+            max_value=1000,
+            step=50,
+        ),
         "evacuation_start_h": mesa.visualization.Slider(
             "Evacuation start time (hr)", value=6, min_value=6, max_value=23, step=1
         ),

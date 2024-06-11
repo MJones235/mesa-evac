@@ -17,7 +17,8 @@ from src.agent.building import (
     WorkPlace,
 )
 from src.agent.evacuee import Evacuee
-from src.agent.evacuation_zone import EvacuationZone
+from src.agent.evacuation_zone import EvacuationZone, EvacuationZoneExit
+from src.agent.road import Road
 from src.space.city import City
 from src.space.road_network import CityRoads
 import pandas as pd
@@ -36,8 +37,10 @@ class EvacuationModel(mesa.Model):
     day: int
     hour: int
     minute: int
+    seconds: int
     evacuation_start_h: int
     evacuation_start_m: int
+    evacuating: bool
 
     def __init__(
         self,
@@ -48,6 +51,7 @@ class EvacuationModel(mesa.Model):
         evacuation_zone_radius: int,
         evacuation_start_h: int,
         evacuation_start_m: int,
+        visualise_roads: bool = False,
     ) -> None:
         super().__init__()
         self.schedule = mesa.time.RandomActivation(self)
@@ -56,11 +60,14 @@ class EvacuationModel(mesa.Model):
         self._load_domain_from_file(domain_path)
         self._load_buildings()
         self.roads = CityRoads(city, self.domain)
+        if visualise_roads:
+            self._load_roads()
         self._set_building_entrance()
         self._create_evacuees()
         self.day = 0
         self.hour = 5
-        self.minute = 50
+        self.minute = 58
+        self.seconds = 0
         self.datacollector = mesa.DataCollector(
             model_reporters={
                 "time": get_time,
@@ -70,6 +77,7 @@ class EvacuationModel(mesa.Model):
         self.evacuation_start_m = evacuation_start_m
         self.bomb_location = bomb_location
         self.evacuation_zone_radius = evacuation_zone_radius
+        self.evacuating = False
         self.datacollector.collect(self)
 
     def step(self) -> None:
@@ -79,16 +87,21 @@ class EvacuationModel(mesa.Model):
             self.day == 0
             and self.hour == self.evacuation_start_h
             and self.minute == self.evacuation_start_m
+            and self.seconds == 0
         ):
+            self.evacuating = True
             self._create_evacuation_zone(
                 self.bomb_location, self.evacuation_zone_radius
             )
+            for evacuee in self.space.evacuees:
+                evacuee.begin_evacuation(self.space.evacuation_zone)
 
         self.schedule.step()
         self.datacollector.collect(self)
 
     def _load_domain_from_file(self, domain_path: str) -> None:
-        self.domain = gpd.read_file(domain_path).geometry[0]
+        df = gpd.read_file(domain_path).set_crs("EPSG:4326", allow_override=True)
+        self.domain = df.geometry[0]
 
     def _load_buildings(self) -> None:
         def polygon(gdf: GeoDataFrame) -> GeoDataFrame:
@@ -161,6 +174,11 @@ class EvacuationModel(mesa.Model):
                 building.centroid
             )
 
+    def _load_roads(self) -> None:
+        road_creator = mg.AgentCreator(Road, model=self)
+        roads = road_creator.from_GeoDataFrame(self.roads.edges)
+        self.space.add_agents(roads)
+
     def _create_evacuees(self) -> None:
         for _ in range(self.num_agents):
             random_home = self.space.get_random_home()
@@ -189,16 +207,25 @@ class EvacuationModel(mesa.Model):
             centre_point=centre_point,
             radius=radius,
         )
-
+        evacuation_zone.set_exits(self.roads.edges)
+        exits = mg.AgentCreator(
+            EvacuationZoneExit, model=self, crs="EPSG:27700"
+        ).from_GeoDataFrame(evacuation_zone.exits)
         self.space.add_evacuation_zone(evacuation_zone)
+        self.space.add_exits(exits)
         self.schedule.add(evacuation_zone)
+        self.roads.add_exits_to_graph(evacuation_zone.exits)
 
     def _update_clock(self) -> None:
-        self.minute += 10
-        if self.minute == 60:
-            if self.hour == 23:
-                self.hour = 0
-                self.day += 1
+        self.seconds += 10
+        if self.seconds == 60:
+            if self.minute == 59:
+                if self.hour == 23:
+                    self.hour = 0
+                    self.day += 1
+                else:
+                    self.hour += 1
+                self.minute = 0
             else:
-                self.hour += 1
-            self.minute = 0
+                self.minute += 1
+            self.seconds = 0

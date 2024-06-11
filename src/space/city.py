@@ -14,11 +14,13 @@ from src.agent.building import (
     Supermarket,
     WorkPlace,
 )
-from src.agent.evacuation_zone import EvacuationZone
+from src.agent.evacuation_zone import EvacuationZone, EvacuationZoneExit
 from src.agent.evacuee import Evacuee
 
 
 class City(mg.GeoSpace):
+    evacuation_zone: EvacuationZone
+    exits: Tuple[EvacuationZoneExit]
     homes: Tuple[Building]
     work_buildings: Tuple[Building]
     recreation_buildings: Tuple[Building]
@@ -30,8 +32,13 @@ class City(mg.GeoSpace):
     _evacuee_pos_map: DefaultDict[mesa.space.FloatCoordinate, Set[Evacuee]]
     _evacuee_id_map: Dict[int, Evacuee]
 
+    @property
+    def evacuees(self) -> list[Evacuee]:
+        return list(self._evacuee_id_map.values())
+
     def __init__(self, crs: str) -> None:
         super().__init__(crs=crs)
+        self.exits = ()
         self.homes = ()
         self.work_buildings = ()
         self.recreation_buildings = ()
@@ -114,6 +121,11 @@ class City(mg.GeoSpace):
 
     def add_evacuation_zone(self, agent: EvacuationZone) -> None:
         super().add_agents([agent])
+        self.evacuation_zone = agent
+
+    def add_exits(self, agents) -> None:
+        super().add_agents(agents)
+        self.exits = self.exits + tuple(agents)
 
     def update_home_counter(
         self,
