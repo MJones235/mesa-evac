@@ -130,7 +130,10 @@ class Evacuee(mg.GeoAgent):
         ):
             self._evacuate()
         else:
-            if self.status == "parked" and self.model.simulation_time > self.leave_time:
+            if (
+                self.status == "parked"
+                and self.model.simulation_time.time() > self.leave_time
+            ):
                 self.destination_schedule_node = (
                     self.schedule.get_next_destination_name(self.current_schedule_node)
                 )
@@ -156,6 +159,7 @@ class Evacuee(mg.GeoAgent):
                         agent
                         for agent in self.model.space.evacuees
                         if agent.unique_id != self.unique_id
+                        and agent.route
                         and len(agent.route) > 2
                         and agent.route[agent.route_index]
                         == self.route[self.route_index]
@@ -188,7 +192,8 @@ class Evacuee(mg.GeoAgent):
                             self.destination_schedule_node = None
                             self.destination_building = None
                             self.leave_time = self.schedule.get_leave_time(
-                                self.current_schedule_node, self.model.simulation_time
+                                self.current_schedule_node,
+                                self.model.simulation_time.time(),
                             ).time()
                             return
                     else:

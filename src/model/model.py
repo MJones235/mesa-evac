@@ -206,7 +206,6 @@ class EvacuationModel(mesa.Model):
                 )[0],
             )
 
-            evacuee.status = "home"
             self.space.add_evacuee(evacuee)
             self.schedule.add(evacuee)
 
