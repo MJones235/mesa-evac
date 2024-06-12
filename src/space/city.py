@@ -69,9 +69,14 @@ class City(mg.GeoSpace):
         return self._get_random_building(self.schools)
 
     def _get_random_building(self, buildings: tuple[Building]) -> Building:
-        return (
-            random.choice(buildings) if len(buildings) > 0 else self.get_random_work()
-        )
+        if len(buildings) == 0:
+            buildings = self.work_buildings
+
+        return random.choices(
+            [building for building in buildings],
+            weights=[building.geometry.area for building in buildings],
+            k=1,
+        )[0]
 
     def get_building_by_id(self, unique_id: int) -> Building:
         return self._buildings[unique_id]

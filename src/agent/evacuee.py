@@ -1,9 +1,10 @@
 import mesa
 import mesa_geo as mg
-from shapely.geometry import Point
+from shapely import Point, buffer, Polygon
 import pyproj
 import numpy as np
 from datetime import time, timedelta
+import pointpats
 
 from src.agent.building import Building
 
@@ -21,11 +22,12 @@ class Evacuee(mg.GeoAgent):
     model: mesa.Model
     geometry: Point
     crs: pyproj.CRS
-    origin: Building
-    destination: Building
+
     route: list[mesa.space.FloatCoordinate]
     route_index: int
     distance_along_edge: float
+    destination_building: Building
+
     status: str
     home: Building
     work: Building
@@ -33,7 +35,8 @@ class Evacuee(mg.GeoAgent):
     evacuation_delay: timedelta
 
     schedule: Schedule
-    schedule_node: str
+    current_schedule_node: str
+    destination_schedule_node: str
     leave_time: time
 
     speed: float
@@ -47,19 +50,14 @@ class Evacuee(mg.GeoAgent):
         self.category = category
         self.speed = self.model.agent_data.iloc[category].walking_speed
         self._set_schedule()
-        geometry = self._get_start_position()
+        geometry = self._initialise_position()
 
         super().__init__(unique_id, model, geometry, crs)
 
-        self.destination = work
-        self.origin = self.model.space.get_building_by_id(self.home.unique_id)
-        self.route = []
-        self.route_index = 0
         self.distance_along_edge = 0
         self.evacuation_delay = self._response_time()
 
     def step(self) -> None:
-        self._prepare_to_move()
         self._move()
 
     def _set_schedule(self) -> None:
@@ -70,10 +68,22 @@ class Evacuee(mg.GeoAgent):
         elif self.category == 2:
             self.schedule = RetiredAdultSchedule(self)
 
-    def _get_start_position(self) -> None:
-        (self.schedule_node, position, self.leave_time) = self.schedule.start_position(
-            self.model.simulation_time.time()
-        )
+    def _initialise_position(self) -> None:
+        (
+            self.current_schedule_node,
+            position,
+            self.leave_time,
+            self.destination_schedule_node,
+            self.destination_building,
+            self.route,
+            self.route_index,
+        ) = self.schedule.start_position(self.model.simulation_time.time())
+
+        if self.destination_schedule_node != None:
+            self.status = "travelling"
+        else:
+            self.status = "parked"
+
         return position
 
     def _evacuate(self) -> None:
@@ -95,27 +105,6 @@ class Evacuee(mg.GeoAgent):
         exit = exit_nodes.iloc[int(np.argmin(distances))]
         self._path_select((exit.geometry.x, exit.geometry.y))
 
-    def _prepare_to_move(self) -> None:
-        if self.model.evacuating and self.status != "evacuating":
-            if (
-                self.model.simulation_time - self.model.evacuation_start_time
-                >= self.evacuation_delay
-                and self.model.space.evacuation_zone.geometry.contains(self.geometry)
-            ):
-                self._evacuate()
-            else:
-                self.status = "waiting to evacuate"
-
-        elif self.model.evacuating and self.status == "transport":
-            dest = self.destination
-
-            while self.model.space.evacuation_zone.geometry.contains(
-                Point(dest.entrance_pos)
-            ):
-                dest = self.model.space.get_random_home()
-            self.destination = dest
-            self._path_select(self.destination.entrance_pos)
-
     def _update_location(self):
         origin_node = self.model.roads.nodes.iloc[self.route[self.route_index]]
         destination_node = self.model.roads.nodes.iloc[self.route[self.route_index + 1]]
@@ -132,63 +121,90 @@ class Evacuee(mg.GeoAgent):
             self.model.space.move_evacuee(self, (x, y))
 
     def _move(self) -> None:
-        if len(self.route) < 2:
-            return
+        if (
+            self.model.evacuating
+            and self.status != "evacuating"
+            and self.model.simulation_time - self.model.evacuation_start_time
+            >= self.evacuation_delay
+            and self.model.space.evacuation_zone.geometry.contains(self.geometry)
+        ):
+            self._evacuate()
+        else:
+            if self.status == "parked" and self.model.simulation_time > self.leave_time:
+                self.destination_schedule_node = (
+                    self.schedule.get_next_destination_name(self.current_schedule_node)
+                )
+                self.destination_building = self.schedule.building_from_node_name(
+                    self.destination_schedule_node
+                )
+                (self.route, _) = self.schedule.get_path(
+                    self.current_schedule_node, self.destination_schedule_node
+                )
+                self.route_index = 0
+                self.distance_along_edge = 0
+                self.status = "travelling"
 
-        if self.status == "transport" or self.status == "evacuating":
-            distance_to_travel = (
-                self.speed / 60 / 60 * self.model.TIMESTEP.seconds * 1000
-            )  # metres travelled in timestep
+            if self.status == "travelling" or self.status == "evacuating":
+                distance_to_travel = (
+                    self.speed / 60 / 60 * self.model.TIMESTEP.seconds * 1000
+                )  # metres travelled in timestep
 
-            # if agent passes through one or more nodes during the step
-            while distance_to_travel >= self._distance_to_next_node():
+                # if agent passes through one or more nodes during the step
+                while distance_to_travel >= self._distance_to_next_node():
 
-                agents_in_path = [
-                    agent
-                    for agent in self.model.space.evacuees
-                    if agent.unique_id != self.unique_id
-                    and len(agent.route) > 2
-                    and agent.route[agent.route_index] == self.route[self.route_index]
-                    and agent.distance_along_edge > self.distance_along_edge
-                    and agent.distance_along_edge - self.distance_along_edge
-                    < distance_to_travel
-                ]
+                    agents_in_path = [
+                        agent
+                        for agent in self.model.space.evacuees
+                        if agent.unique_id != self.unique_id
+                        and len(agent.route) > 2
+                        and agent.route[agent.route_index]
+                        == self.route[self.route_index]
+                        and agent.distance_along_edge > self.distance_along_edge
+                        and agent.distance_along_edge - self.distance_along_edge
+                        < distance_to_travel
+                    ]
 
-                if len(agents_in_path) == 0:
-                    distance_to_travel -= self._distance_to_next_node()
-                    self.route_index += 1
-                    self.distance_along_edge = 0
-                    self.model.space.move_evacuee(
-                        self,
-                        self.model.roads.get_coords_from_idx(
-                            self.route[self.route_index]
-                        ),
-                    )
+                    if len(agents_in_path) == 0:
+                        distance_to_travel -= self._distance_to_next_node()
+                        self.route_index += 1
+                        self.distance_along_edge = 0
+                        self.model.space.move_evacuee(
+                            self,
+                            self.model.roads.get_coords_from_idx(
+                                self.route[self.route_index]
+                            ),
+                        )
 
-                    # if target is reacheds
-                    if self.route_index == len(self.route) - 1:
-                        if self.status == "evacuating":
-                            self.status = "transport"
-                        elif self.status == "transport":
-                            if self.destination == self.work:
-                                self.status = "work"
-                            elif self.destination == self.home:
-                                self.status = "home"
-                        return
-                else:
-                    nearest_agent_distance = sorted(
-                        [agent.distance_along_edge for agent in agents_in_path]
-                    )[0]
+                        # if target is reacheds
+                        if self.route_index == len(self.route) - 1:
+                            self.model.space.move_evacuee(
+                                self,
+                                self._random_point_in_polygon(
+                                    self.destination_building.geometry
+                                ),
+                            )
+                            self.status = "parked"
+                            self.current_schedule_node = self.destination_schedule_node
+                            self.destination_schedule_node = None
+                            self.destination_building = None
+                            self.leave_time = self.schedule.get_leave_time(
+                                self.current_schedule_node, self.model.simulation_time
+                            ).time()
+                            return
+                    else:
+                        nearest_agent_distance = sorted(
+                            [agent.distance_along_edge for agent in agents_in_path]
+                        )[0]
 
-                    distance_to_travel = (
-                        nearest_agent_distance - self.distance_along_edge - 1
-                    )
-                    if distance_to_travel < 0:
-                        distance_to_travel = 0
-                    break
+                        distance_to_travel = (
+                            nearest_agent_distance - self.distance_along_edge - 1
+                        )
+                        if distance_to_travel < 0:
+                            distance_to_travel = 0
+                        break
 
-            self.distance_along_edge += distance_to_travel
-            self._update_location()
+                self.distance_along_edge += distance_to_travel
+                self._update_location()
 
     def _path_select(self, destination: mesa.space.FloatCoordinate) -> None:
         self.route_index = 0
@@ -210,3 +226,11 @@ class Evacuee(mg.GeoAgent):
         seconds = np.random.normal(300, 120)
         seconds = seconds if seconds > 0 else 0.0
         return timedelta(seconds=seconds)
+
+    def _random_point_in_polygon(self, geometry: Polygon):
+        # A buffer is added because the method hangs if the polygon is too small
+        return Point(
+            pointpats.random.poisson(
+                buffer(geometry=geometry, distance=0.000001), size=1
+            )
+        )

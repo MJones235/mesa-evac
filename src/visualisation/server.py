@@ -1,5 +1,6 @@
 import mesa
 
+from src.agent.building import WorkPlace
 from src.agent.evacuation_zone import EvacuationZone, EvacuationZoneExit
 from src.agent.evacuee import Evacuee
 from src.agent.road import Road
