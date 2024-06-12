@@ -187,7 +187,6 @@ class CityRoads(RoadNetwork):
         origin: mesa.space.FloatCoordinate,
         destination: mesa.space.FloatCoordinate,
     ) -> list[mesa.space.FloatCoordinate]:
-        self.route_index = 0
         if (
             cached_path := self.get_cached_path(
                 source=origin,

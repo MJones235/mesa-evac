@@ -66,7 +66,7 @@ class Schedule:
 
             (path, total_distance) = self.get_path(current_node_name, next_node_name)
 
-            total_travel_time = (total_distance / 1000) / self.agent.speed
+            total_travel_time = (total_distance / 1000) / self.agent.walking_speed
 
             arrival_time_at_next_node = leave_time + timedelta(hours=total_travel_time)
 
@@ -86,7 +86,7 @@ class Schedule:
                     )
                     time_to_next_node = (
                         distance_to_next_node / 1000
-                    ) / self.agent.speed
+                    ) / self.agent.walking_speed
 
                     t += timedelta(hours=time_to_next_node)
                     i += 1

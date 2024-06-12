@@ -41,7 +41,7 @@ if __name__ == "__main__":
             "Simulation start time (hr)", value=7, min_value=0, max_value=23, step=1
         ),
         "simulation_start_m": mesa.visualization.Slider(
-            "Simulation start time (min)", value=58, min_value=0, max_value=59, step=1
+            "Simulation start time (min)", value=59, min_value=0, max_value=59, step=1
         ),
         "evacuation_start_h": mesa.visualization.Slider(
             "Evacuation start time (hr)", value=8, min_value=0, max_value=23, step=1

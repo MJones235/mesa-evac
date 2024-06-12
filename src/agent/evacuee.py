@@ -39,7 +39,7 @@ class Evacuee(mg.GeoAgent):
     destination_schedule_node: str
     leave_time: time
 
-    speed: float
+    walking_speed: float
 
     def __init__(self, unique_id, model, crs, home, work, school, category) -> None:
         self.model = model
@@ -48,7 +48,7 @@ class Evacuee(mg.GeoAgent):
         self.school = school
 
         self.category = category
-        self.speed = self.model.agent_data.iloc[category].walking_speed
+        self.walking_speed = self.model.agent_data.iloc[category].walking_speed
         self._set_schedule()
         geometry = self._initialise_position()
 
@@ -86,6 +86,9 @@ class Evacuee(mg.GeoAgent):
 
         return position
 
+    def evacuate(self) -> None:
+        self._recalculate_route()
+
     def _evacuate(self) -> None:
         self.status = "evacuating"
         exit_nodes = self.model.roads.nodes[
@@ -94,9 +97,12 @@ class Evacuee(mg.GeoAgent):
         exit_idx = [
             self.model.roads.nodes.index.get_loc(node) for node in exit_nodes.index
         ]
-        # index of agent's last visited node
-        source_idx = self.model.roads.get_nearest_node_idx(
-            (self.geometry.x, self.geometry.y)
+        source_idx = (
+            self.route[self.route_index]
+            if self.route != None
+            else self.model.roads.get_nearest_node_idx(
+                (self.geometry.x, self.geometry.y)
+            )
         )
         # calculate minimum distance to each evacuation point
         distances = self.model.roads.i_graph.shortest_paths_dijkstra(
@@ -149,7 +155,7 @@ class Evacuee(mg.GeoAgent):
 
             if self.status == "travelling" or self.status == "evacuating":
                 distance_to_travel = (
-                    self.speed / 60 / 60 * self.model.TIMESTEP.seconds * 1000
+                    self.walking_speed / 60 / 60 * self.model.TIMESTEP.seconds * 1000
                 )  # metres travelled in timestep
 
                 # if agent passes through one or more nodes during the step
@@ -171,6 +177,7 @@ class Evacuee(mg.GeoAgent):
                     if len(agents_in_path) == 0:
                         distance_to_travel -= self._distance_to_next_node()
                         self.route_index += 1
+
                         self.distance_along_edge = 0
                         self.model.space.move_evacuee(
                             self,
@@ -179,22 +186,31 @@ class Evacuee(mg.GeoAgent):
                             ),
                         )
 
-                        # if target is reacheds
+                        # if target is reached
                         if self.route_index == len(self.route) - 1:
-                            self.model.space.move_evacuee(
-                                self,
-                                self._random_point_in_polygon(
-                                    self.destination_building.geometry
-                                ),
-                            )
-                            self.status = "parked"
-                            self.current_schedule_node = self.destination_schedule_node
-                            self.destination_schedule_node = None
-                            self.destination_building = None
-                            self.leave_time = self.schedule.get_leave_time(
-                                self.current_schedule_node,
-                                self.model.simulation_time.time(),
-                            ).time()
+                            if self.status == "evacuating":
+                                self.status = "parked"
+                                self.leave_time = self.model.simulation_time.time()
+                                self.destination_schedule_node = None
+                                self.destination_building = None
+
+                            else:
+                                self.model.space.move_evacuee(
+                                    self,
+                                    self._random_point_in_polygon(
+                                        self.destination_building.geometry
+                                    ),
+                                )
+                                self.status = "parked"
+                                self.current_schedule_node = (
+                                    self.destination_schedule_node
+                                )
+                                self.destination_schedule_node = None
+                                self.destination_building = None
+                                self.leave_time = self.schedule.get_leave_time(
+                                    self.current_schedule_node,
+                                    self.model.simulation_time.time(),
+                                ).time()
                             return
                     else:
                         nearest_agent_distance = sorted(
@@ -216,11 +232,22 @@ class Evacuee(mg.GeoAgent):
         self.route = self.model.roads.shortest_path(
             origin=(self.geometry.x, self.geometry.y), destination=destination
         )
+        self.model.space.move_evacuee(
+            self,
+            self.model.roads.get_coords_from_idx(self.route[self.route_index]),
+        )
+        self.distance_along_edge = 0
+        if len(self.route) == 1:
+            self.status = "parked"
+            self.route = None
+            self.leave_time = self.model.simulation_time.time()
 
     def _distance_to_next_node(self) -> float:
         origin_node = self.model.roads.nodes.iloc[self.route[self.route_index]]
-        destination_node = self.model.roads.nodes.iloc[self.route[self.route_index + 1]]
+        if self.route_index == len(self.route) - 1:
+            print(self.route_index, self.route)
 
+        destination_node = self.model.roads.nodes.iloc[self.route[self.route_index + 1]]
         edge = self.model.roads.nx_graph.get_edge_data(
             origin_node.name,
             destination_node.name,
@@ -239,3 +266,7 @@ class Evacuee(mg.GeoAgent):
                 buffer(geometry=geometry, distance=0.000001), size=1
             )
         )
+
+    def _recalculate_route(self) -> None:
+        if self.destination_building != None:
+            self._path_select(self.destination_building.entrance_pos)
