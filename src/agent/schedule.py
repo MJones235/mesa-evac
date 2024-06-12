@@ -28,13 +28,15 @@ class Schedule:
         self.schedule = G
         self.agent = agent
 
-    def start_position(self, t: time) -> tuple[str, Point]:
+    def start_position(self, t: time) -> tuple[str, Point, datetime.time]:
         # assume that the agent will always be in the same location at the start of the day (most likely at home)
         # this is the start node and it has zero incoming edges
         current_node = [n for n, d in self.schedule.in_degree() if d == 0][0]
         date_today = date.today()
         target_time = datetime.datetime.combine(date_today, t)
         arrival_time = datetime.datetime.combine(date_today, time(hour=0))
+        # time the agent will leave their current location
+        leave_time = datetime.datetime.combine(date_today, time(hour=23, minute=59))
 
         # traverse the agent's schedule until time t is reached
         while arrival_time < target_time:
@@ -45,8 +47,6 @@ class Schedule:
                 seconds=np.random.normal(0, node["variation"].total_seconds())
             )
 
-            # time the agent will leave their current location
-            leave_time: datetime
             if "leave_at" in node:
                 leave_time = (
                     datetime.datetime.combine(date_today, node["leave_at"]) + time_delta
@@ -113,10 +113,10 @@ class Schedule:
                     i += 1
 
                 node = self.agent.model.roads.nodes.iloc[path[i - 2]]
-                return ("transport", Point(node.x, node.y))
+                return ("transport", Point(node.x, node.y), None)
 
         current_location = self._point_from_node_name(current_node)
-        return (current_node, current_location)
+        return (current_node, current_location, leave_time.time())
 
     def _point_from_node_name(
         self,

@@ -2,11 +2,11 @@ import mesa
 import mesa_geo as mg
 import geopandas as gpd
 import osmnx as ox
-import matplotlib.pyplot as plt
-from shapely import Polygon, Point, buffer
+from shapely import Polygon, Point
 from geopandas import GeoDataFrame
 import uuid
 import random
+from datetime import datetime, timedelta, time, date
 
 from src.agent.building import (
     Building,
@@ -25,8 +25,8 @@ from src.space.road_network import CityRoads
 import pandas as pd
 
 
-def get_time(model) -> pd.Timedelta:
-    return pd.Timedelta(days=model.day, hours=model.hour, minutes=model.minute)
+def get_time(model) -> timedelta:
+    return model.simulation_time - model.simulation_start_time
 
 
 class EvacuationModel(mesa.Model):
@@ -35,16 +35,16 @@ class EvacuationModel(mesa.Model):
     roads: CityRoads
     domain: Polygon
     num_agents: int
-    day: int
-    hour: int
-    minute: int
-    seconds: int
-    evacuation_start_h: int
-    evacuation_start_m: int
+
+    simulation_time = datetime
+    simulation_start_time = datetime
+    evacuation_start_time = datetime
+    evacuation_duration: timedelta
+
     evacuating: bool
     agent_data: pd.DataFrame
 
-    evacuation_duration: int
+    TIMESTEP = timedelta(seconds=10)
 
     def __init__(
         self,
@@ -72,12 +72,14 @@ class EvacuationModel(mesa.Model):
             self._load_roads()
         self._set_building_entrance()
 
-        self.day = 0
-        self.hour = simulation_start_h
-        self.minute = simulation_start_m
-        self.seconds = 0
-        self.evacuation_start_h = evacuation_start_h
-        self.evacuation_start_m = evacuation_start_m
+        date_today = date.today()
+        self.simulation_time = datetime.combine(
+            date_today, time(hour=simulation_start_h, minute=simulation_start_m)
+        )
+        self.simulation_start_time = self.simulation_time
+        self.evacuation_start_time = datetime.combine(
+            date_today, time(hour=evacuation_start_h, minute=evacuation_start_m)
+        )
 
         self._create_evacuees()
         self.datacollector = mesa.DataCollector(
@@ -92,17 +94,9 @@ class EvacuationModel(mesa.Model):
         self.datacollector.collect(self)
 
     def step(self) -> None:
-        self._update_clock()
+        self.simulation_time += self.TIMESTEP
 
-        if self.evacuating:
-            self.evacuation_duration += 10
-
-        if (
-            self.day == 0
-            and self.hour == self.evacuation_start_h
-            and self.minute == self.evacuation_start_m
-            and self.seconds == 0
-        ):
+        if not self.evacuating and self.evacuation_start_time <= self.simulation_time:
             self.evacuating = True
             self._create_evacuation_zone(
                 self.bomb_location, self.evacuation_zone_radius
@@ -232,17 +226,3 @@ class EvacuationModel(mesa.Model):
         self.space.add_exits(exits)
         self.schedule.add(evacuation_zone)
         self.roads.add_exits_to_graph(evacuation_zone.exits)
-
-    def _update_clock(self) -> None:
-        self.seconds += 10
-        if self.seconds == 60:
-            if self.minute == 59:
-                if self.hour == 23:
-                    self.hour = 0
-                    self.day += 1
-                else:
-                    self.hour += 1
-                self.minute = 0
-            else:
-                self.minute += 1
-            self.seconds = 0

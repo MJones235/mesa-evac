@@ -3,7 +3,7 @@ import mesa_geo as mg
 from shapely.geometry import Point
 import pyproj
 import numpy as np
-from datetime import time
+from datetime import time, timedelta
 
 from src.agent.building import Building
 
@@ -26,16 +26,15 @@ class Evacuee(mg.GeoAgent):
     route: list[mesa.space.FloatCoordinate]
     route_index: int
     distance_along_edge: float
-    start_time_h: int
-    start_time_m: int
-    end_time_h: int
-    end_time_m: int
     status: str
     home: Building
     work: Building
     school: Building
-    evacuation_delay: float
+    evacuation_delay: timedelta
+
     schedule: Schedule
+    schedule_node: str
+    leave_time: time
 
     speed: float
 
@@ -51,11 +50,6 @@ class Evacuee(mg.GeoAgent):
         geometry = self._get_start_position()
 
         super().__init__(unique_id, model, geometry, crs)
-
-        self.start_time_h = round(np.random.normal(8, 1))
-        self.start_time_m = np.random.randint(0, 12) * 5
-        self.end_time_h = self.start_time_h + 8
-        self.end_time_m = np.random.randint(0, 12) * 5
 
         self.destination = work
         self.origin = self.model.space.get_building_by_id(self.home.unique_id)
@@ -77,8 +71,8 @@ class Evacuee(mg.GeoAgent):
             self.schedule = RetiredAdultSchedule(self)
 
     def _get_start_position(self) -> None:
-        (self.schedule_node, position) = self.schedule.start_position(
-            time(hour=self.model.hour, minute=self.model.minute)
+        (self.schedule_node, position, self.leave_time) = self.schedule.start_position(
+            self.model.simulation_time.time()
         )
         return position
 
@@ -104,7 +98,8 @@ class Evacuee(mg.GeoAgent):
     def _prepare_to_move(self) -> None:
         if self.model.evacuating and self.status != "evacuating":
             if (
-                self.model.evacuation_duration > self.evacuation_delay
+                self.model.simulation_time - self.model.evacuation_start_time
+                >= self.evacuation_delay
                 and self.model.space.evacuation_zone.geometry.contains(self.geometry)
             ):
                 self._evacuate()
@@ -120,23 +115,6 @@ class Evacuee(mg.GeoAgent):
                 dest = self.model.space.get_random_home()
             self.destination = dest
             self._path_select(self.destination.entrance_pos)
-
-        elif (
-            self.status == "home"
-            and self.model.hour == self.start_time_h
-            and self.model.minute == self.start_time_m
-        ):
-            self.destination = self.model.space.get_building_by_id(self.work.unique_id)
-            self._path_select(self.destination.entrance_pos)
-            self.status = "transport"
-        elif (
-            self.status == "work"
-            and self.model.hour == self.end_time_h
-            and self.model.minute == self.end_time_m
-        ):
-            self.destination = self.model.space.get_building_by_id(self.home.unique_id)
-            self._path_select(self.destination.entrance_pos)
-            self.status = "transport"
 
     def _update_location(self):
         origin_node = self.model.roads.nodes.iloc[self.route[self.route_index]]
@@ -159,8 +137,8 @@ class Evacuee(mg.GeoAgent):
 
         if self.status == "transport" or self.status == "evacuating":
             distance_to_travel = (
-                self.speed / 60 / 60 * 10 * 1000
-            )  # metres travelled in 10 seconds
+                self.speed / 60 / 60 * self.model.TIMESTEP.seconds * 1000
+            )  # metres travelled in timestep
 
             # if agent passes through one or more nodes during the step
             while distance_to_travel >= self._distance_to_next_node():
@@ -228,6 +206,7 @@ class Evacuee(mg.GeoAgent):
         )[0]
         return edge["length"] - self.distance_along_edge
 
-    def _response_time(self) -> float:
-        t = np.random.normal(300, 120)
-        return t if t > 0 else 0.0
+    def _response_time(self) -> timedelta:
+        seconds = np.random.normal(300, 120)
+        seconds = seconds if seconds > 0 else 0.0
+        return timedelta(seconds=seconds)
