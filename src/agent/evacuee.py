@@ -5,6 +5,7 @@ import pyproj
 import numpy as np
 from datetime import time, timedelta
 import pointpats
+import random
 
 from src.agent.building import Building
 
@@ -41,8 +42,11 @@ class Evacuee(mg.GeoAgent):
     destination_schedule_node: str
     leave_time: time
 
+    in_car: bool
+
     walking_speed: float
     min_pedestrian_separation = 1.0
+    min_car_separation = 8.0
 
     def __init__(self, unique_id, model, crs, home, work, school, category) -> None:
         self.model = model
@@ -51,6 +55,7 @@ class Evacuee(mg.GeoAgent):
         self.school = school
         self.category = category
         self.walking_speed = self.model.agent_data.iloc[category].walking_speed
+        self.in_car = random.choice([True, False])
         self._set_schedule()
         geometry = self._initialise_position()
 
@@ -58,6 +63,10 @@ class Evacuee(mg.GeoAgent):
 
         self.distance_along_edge = 0
         self.evacuation_delay = self._response_time()
+
+    @property
+    def speed(self):
+        return 48 if self.in_car else self.walking_speed
 
     def step(self) -> None:
         self._move()
@@ -79,7 +88,7 @@ class Evacuee(mg.GeoAgent):
             self.destination_building,
             self.route,
             self.route_index,
-        ) = self.schedule.start_position(self.model.simulation_time.time())
+        ) = self.schedule.start_position(self.model.simulation_time.time(), self.in_car)
 
         if self.destination_schedule_node != None:
             self.status = "travelling"
@@ -92,6 +101,9 @@ class Evacuee(mg.GeoAgent):
         self._recalculate_route()
 
     def _evacuate(self) -> None:
+        if self.status == "parked":
+            self.in_car = False
+
         self.status = "evacuating"
         # location of evacuation points
         exit_nodes = self.model.roads.nodes[
@@ -165,7 +177,7 @@ class Evacuee(mg.GeoAgent):
             if self.status == "travelling" or self.status == "evacuating":
                 # distance in metres travelled in timestep
                 distance_to_travel = (
-                    self.walking_speed / 60 / 60 * self.model.TIMESTEP.seconds * 1000
+                    self.speed / 60 / 60 * self.model.TIMESTEP.seconds * 1000
                 )
 
                 # if agent passes through one or more nodes during the step
@@ -175,6 +187,7 @@ class Evacuee(mg.GeoAgent):
                         agent
                         for agent in self.model.space.evacuees
                         if agent.unique_id != self.unique_id
+                        and agent.in_car == self.in_car
                         and agent.route
                         and len(agent.route) > 2
                         and agent.route[agent.route_index]

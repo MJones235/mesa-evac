@@ -30,7 +30,7 @@ class Schedule:
         self.schedule = G
         self.agent = agent
 
-    def start_position(self, t: time) -> tuple[str, Point, datetime.time]:
+    def start_position(self, t: time, in_car: bool) -> tuple[str, Point, datetime.time]:
         """
         Returns:
             current_node_name (str)
@@ -41,7 +41,6 @@ class Schedule:
             route (list[int]): if the agent is travelling, this is their path
             route_index (int): if the agent is travelling, this is their route index
         """
-
         # assume that the agent will always be in the same location at the start of the day (most likely at home)
         # this is the start node and it has zero incoming edges
         current_node_name = [n for n, d in self.schedule.in_degree() if d == 0][0]
@@ -66,7 +65,7 @@ class Schedule:
 
             (path, total_distance) = self.get_path(current_node_name, next_node_name)
 
-            total_travel_time = (total_distance / 1000) / self.agent.walking_speed
+            total_travel_time = (total_distance / 1000) / self.agent.speed
 
             arrival_time_at_next_node = leave_time + timedelta(hours=total_travel_time)
 
@@ -86,7 +85,7 @@ class Schedule:
                     )
                     time_to_next_node = (
                         distance_to_next_node / 1000
-                    ) / self.agent.walking_speed
+                    ) / self.agent.speed
 
                     t += timedelta(hours=time_to_next_node)
                     i += 1
