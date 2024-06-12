@@ -20,7 +20,9 @@ if __name__ == "__main__":
         data_file_prefix = args.city
 
     else:
-        raise ValueError("Invalid city name. Choose from [newcastle-xs]")
+        raise ValueError(
+            "Invalid city name. Choose from [newcastle-xs, newcastle-sm, newcastle-md]"
+        )
 
     model_params = {
         "city": data_file_prefix,
