@@ -112,10 +112,10 @@ class EvacuationModel(mesa.Model):
 
         if self.output_path is not None:
             self.datacollector.get_agent_vars_dataframe().to_csv(
-                self.output_path + "/output.agent.csv"
+                self.output_path + ".agent.csv"
             )
             self.datacollector.get_model_vars_dataframe().to_csv(
-                self.output_path + "/output.model.csv"
+                self.output_path + ".model.csv"
             )
             self._write_output_files()
 
@@ -256,32 +256,17 @@ class EvacuationModel(mesa.Model):
             agent.evacuate()
 
     def _write_output_files(self):
-        output_gml = self.output_path + "/output.gml"
+        output_gml = self.output_path + ".gml"
         write_gml(self.roads.nx_graph, path=output_gml, stringizer=lambda x: str(x))
 
-        output_gpkg = self.output_path + "/output.gpkg"
+        output_gpkg = self.output_path + ".gpkg"
 
-        agent_list = [
-            {
-                "geometry": agent.geometry,
-                "category": agent.category,
-                "walking_speed": agent.walking_speed,
-                "in_car": agent.in_car,
-            }
-            for agent in self.space.evacuees
-        ]
-        gpd.GeoDataFrame(agent_list, crs="EPSG:27700").to_file(
-            output_gpkg, layer="agents", driver="GPKG"
+        gpd.GeoDataFrame([{"geometry": self.space.evacuation_zone.geometry}]).to_file(
+            output_gpkg, layer="evacuation_zone", driver="GPKG"
         )
         exits_list = [{"geometry": exit.geometry} for exit in self.space.exits]
         gpd.GeoDataFrame(exits_list, crs="EPSG:27700").to_file(
             output_gpkg, layer="exits", driver="GPKG"
-        )
-        self.roads.nodes[["geometry"]].to_file(
-            output_gpkg, layer="nodes", driver="GPKG"
-        )
-        self.roads.edges[["geometry"]].to_file(
-            output_gpkg, layer="edges", driver="GPKG"
         )
 
 

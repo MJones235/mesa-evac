@@ -74,7 +74,7 @@ def run_and_generate_video(data_file_prefix: str) -> None:
         evacuation_start_m=30,
         simulation_start_h=8,
         simulation_start_m=25,
-        output_path=output_path,
+        output_path=output_path + f"/{current_time}",
     ).run(50)
 
 
