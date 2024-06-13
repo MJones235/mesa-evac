@@ -10,20 +10,11 @@ from src.visualisation.server import agent_draw, clock_element
 def make_parser():
     parser = argparse.ArgumentParser("Evacuation Model")
     parser.add_argument("--city", type=str, required=True)
+    parser.add_argument("--interactive", action="store_true")
     return parser
 
 
-if __name__ == "__main__":
-    args = make_parser().parse_args()
-
-    if args.city in ["newcastle-xs", "newcastle-sm", "newcastle-md"]:
-        data_file_prefix = args.city
-
-    else:
-        raise ValueError(
-            "Invalid city name. Choose from [newcastle-xs, newcastle-sm, newcastle-md]"
-        )
-
+def run_interactively() -> None:
     model_params = {
         "city": data_file_prefix,
         "domain_path": f"data/{data_file_prefix}/domain.gpkg",
@@ -60,3 +51,20 @@ if __name__ == "__main__":
     )
 
     server.launch()
+
+
+if __name__ == "__main__":
+    args = make_parser().parse_args()
+
+    if args.city in ["newcastle-xs", "newcastle-sm", "newcastle-md"]:
+        data_file_prefix = args.city
+
+    else:
+        raise ValueError(
+            "Invalid city name. Choose from [newcastle-xs, newcastle-sm, newcastle-md]"
+        )
+
+    if args.interactive:
+        run_interactively()
+    else:
+        print("Non interactive")

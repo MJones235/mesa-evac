@@ -7,15 +7,18 @@
 See environment.yml
 
 `conda env create -f environment.yml -n mesa-evac`
+
 `conda activate mesa-evac`
+
 `conda install --channel conda-forge --override-channels --yes fiona pyogrio`
 
 ## Python Path
 
 From the root of the projecy
 `set -a`
+
 `source .env`
 
-## Run
+## Run interactively
 
-`python3 scripts/run.py --city newcastle-sm`
+`python3 scripts/run.py --city newcastle-sm --interactive`
