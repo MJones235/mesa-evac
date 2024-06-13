@@ -2,6 +2,9 @@ import argparse
 import mesa
 import mesa_geo as mg
 from shapely import Point
+from datetime import datetime
+import time
+import os
 
 from src.model.model import EvacuationModel
 from src.visualisation.server import agent_draw, clock_element
@@ -14,7 +17,7 @@ def make_parser():
     return parser
 
 
-def run_interactively() -> None:
+def run_interactively(data_file_prefix: str) -> None:
     model_params = {
         "city": data_file_prefix,
         "domain_path": f"data/{data_file_prefix}/domain.gpkg",
@@ -53,6 +56,28 @@ def run_interactively() -> None:
     server.launch()
 
 
+def run_and_generate_video(data_file_prefix: str) -> None:
+    current_time = datetime.fromtimestamp(time.time()).strftime("%Y%m%d%H%M%S")
+    output_path = f"outputs/{data_file_prefix}/{current_time}"
+
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
+
+    EvacuationModel(
+        city=data_file_prefix,
+        domain_path=f"data/{data_file_prefix}/domain.gpkg",
+        agent_data_path=f"data/{data_file_prefix}/agent_data.csv",
+        num_agents=2000,
+        bomb_location=Point(424860, 564443),
+        evacuation_zone_radius=450,
+        evacuation_start_h=8,
+        evacuation_start_m=30,
+        simulation_start_h=8,
+        simulation_start_m=25,
+        output_path=output_path,
+    ).run(50)
+
+
 if __name__ == "__main__":
     args = make_parser().parse_args()
 
@@ -65,6 +90,6 @@ if __name__ == "__main__":
         )
 
     if args.interactive:
-        run_interactively()
+        run_interactively(data_file_prefix)
     else:
-        print("Non interactive")
+        run_and_generate_video(data_file_prefix)

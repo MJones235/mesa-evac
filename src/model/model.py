@@ -1,6 +1,7 @@
 import mesa
 import mesa_geo as mg
 import geopandas as gpd
+from networkx import write_gml
 import osmnx as ox
 from shapely import Polygon, Point, difference
 from geopandas import GeoDataFrame
@@ -25,7 +26,7 @@ from src.space.road_network import CityRoads
 import pandas as pd
 
 
-def get_time(model) -> timedelta:
+def get_time_elapsed(model) -> timedelta:
     return model.simulation_time - model.simulation_start_time
 
 
@@ -59,6 +60,7 @@ class EvacuationModel(mesa.Model):
         evacuation_start_m: int,
         simulation_start_h: int,
         simulation_start_m: int,
+        output_path: str = None,
         visualise_roads: bool = False,
     ) -> None:
         super().__init__()
@@ -66,6 +68,7 @@ class EvacuationModel(mesa.Model):
         self.schedule = mesa.time.RandomActivation(self)
         self.space = City(crs="EPSG:27700")
         self.num_agents = num_agents
+        self.output_path = output_path
         self._load_domain_from_file(domain_path)
         self._load_agent_data_from_file(agent_data_path)
         self._load_buildings()
@@ -86,14 +89,35 @@ class EvacuationModel(mesa.Model):
         self._create_evacuees()
         self.datacollector = mesa.DataCollector(
             model_reporters={
-                "time": get_time,
-            }
+                "time_elapsed": get_time_elapsed,
+                "number_evacuated": number_evacuated,
+                "number_to_evacuate": number_to_evacuate,
+            },
+            agent_reporters={"location": "geometry"},
         )
         self.bomb_location = bomb_location
         self.evacuation_zone_radius = evacuation_zone_radius
         self.evacuating = False
         self.evacuation_duration = 0
+        self.output_path = output_path
         self.datacollector.collect(self)
+
+    def run(self, steps: int = None):
+        if steps == None:
+            self.run_model()
+        else:
+            for i in range(steps):
+                print("Step {0}/{1}".format(i, steps))
+                self.step()
+
+        if self.output_path is not None:
+            self.datacollector.get_agent_vars_dataframe().to_csv(
+                self.output_path + "/output.agent.csv"
+            )
+            self.datacollector.get_model_vars_dataframe().to_csv(
+                self.output_path + "/output.model.csv"
+            )
+            self._write_output_files()
 
     def step(self) -> None:
         self.simulation_time += self.TIMESTEP
@@ -230,3 +254,40 @@ class EvacuationModel(mesa.Model):
 
         for agent in self.space.evacuees:
             agent.evacuate()
+
+    def _write_output_files(self):
+        output_gml = self.output_path + "/output.gml"
+        write_gml(self.roads.nx_graph, path=output_gml, stringizer=lambda x: str(x))
+
+        output_gpkg = self.output_path + "/output.gpkg"
+
+        agent_list = [
+            {
+                "geometry": agent.geometry,
+                "category": agent.category,
+                "walking_speed": agent.walking_speed,
+                "in_car": agent.in_car,
+            }
+            for agent in self.space.evacuees
+        ]
+        gpd.GeoDataFrame(agent_list, crs="EPSG:27700").to_file(
+            output_gpkg, layer="agents", driver="GPKG"
+        )
+        exits_list = [{"geometry": exit.geometry} for exit in self.space.exits]
+        gpd.GeoDataFrame(exits_list, crs="EPSG:27700").to_file(
+            output_gpkg, layer="exits", driver="GPKG"
+        )
+        self.roads.nodes[["geometry"]].to_file(
+            output_gpkg, layer="nodes", driver="GPKG"
+        )
+        self.roads.edges[["geometry"]].to_file(
+            output_gpkg, layer="edges", driver="GPKG"
+        )
+
+
+def number_evacuated(model: EvacuationModel):
+    return len([agent for agent in model.space.evacuees if agent.evacuated])
+
+
+def number_to_evacuate(model: EvacuationModel):
+    return len([agent for agent in model.space.evacuees if agent.requires_evacuation])
