@@ -4,6 +4,7 @@ from geopandas import GeoDataFrame, GeoSeries
 
 
 class EvacuationZone(mg.GeoAgent):
+    type = "evacuation_zone"
     exits: GeoDataFrame
 
     def __init__(self, unique_id, model, crs, centre_point: Point, radius: int) -> None:

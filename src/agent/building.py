@@ -8,6 +8,7 @@ from random import randrange
 
 
 class Building(mg.GeoAgent):
+    type = "building"
     unique_id: int
     model: mesa.Model
     geometry: Polygon

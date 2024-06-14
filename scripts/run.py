@@ -6,6 +6,7 @@ from datetime import datetime
 import time
 import os
 
+from scripts.create_video import create_video
 from src.model.model import EvacuationModel
 from src.visualisation.server import agent_draw, clock_element
 
@@ -73,9 +74,11 @@ def run_and_generate_video(data_file_prefix: str) -> None:
         evacuation_start_h=8,
         evacuation_start_m=30,
         simulation_start_h=8,
-        simulation_start_m=25,
+        simulation_start_m=28,
         output_path=output_path + f"/{current_time}",
-    ).run(50)
+    ).run(100)
+
+    create_video(output_path + f"/{current_time}")
 
 
 if __name__ == "__main__":

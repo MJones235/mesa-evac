@@ -18,6 +18,7 @@ from src.agent.schedule import (
 
 
 class Evacuee(mg.GeoAgent):
+    type = "evacuee"
     unique_id: int
     category: int
     model: mesa.Model
@@ -256,13 +257,18 @@ class Evacuee(mg.GeoAgent):
             self.leave_time = self.model.simulation_time.time()
 
     def _distance_to_next_node(self) -> float:
-        origin_node = self.model.roads.nodes.iloc[self.route[self.route_index]]
-        destination_node = self.model.roads.nodes.iloc[self.route[self.route_index + 1]]
-        edge = self.model.roads.nx_graph.get_edge_data(
-            origin_node.name,
-            destination_node.name,
-        )[0]
-        return edge["length"] - self.distance_along_edge
+        try:
+            origin_node = self.model.roads.nodes.iloc[self.route[self.route_index]]
+            destination_node = self.model.roads.nodes.iloc[
+                self.route[self.route_index + 1]
+            ]
+            edge = self.model.roads.nx_graph.get_edge_data(
+                origin_node.name,
+                destination_node.name,
+            )[0]
+            return edge["length"] - self.distance_along_edge
+        except:
+            return 0
 
     def _response_time(self) -> timedelta:
         seconds = np.random.normal(300, 120)

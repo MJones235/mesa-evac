@@ -30,6 +30,10 @@ def get_time_elapsed(model) -> timedelta:
     return model.simulation_time - model.simulation_start_time
 
 
+def get_is_evacuation_started(model) -> bool:
+    return model.evacuating
+
+
 class EvacuationModel(mesa.Model):
     schedule: mesa.time.RandomActivation
     space: City
@@ -89,11 +93,17 @@ class EvacuationModel(mesa.Model):
         self._create_evacuees()
         self.datacollector = mesa.DataCollector(
             model_reporters={
+                "evacuation_started": get_is_evacuation_started,
                 "time_elapsed": get_time_elapsed,
                 "number_evacuated": number_evacuated,
                 "number_to_evacuate": number_to_evacuate,
             },
-            agent_reporters={"location": "geometry"},
+            agent_reporters={
+                "location": "geometry",
+                "type": "type",
+                "in_car": lambda x: x.in_car if hasattr(x, "in_car") else None,
+                "status": lambda x: x.status if hasattr(x, "status") else None,
+            },
         )
         self.bomb_location = bomb_location
         self.evacuation_zone_radius = evacuation_zone_radius
