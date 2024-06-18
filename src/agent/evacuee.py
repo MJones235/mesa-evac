@@ -105,20 +105,14 @@ class Evacuee(mg.GeoAgent):
         if self.model.space.evacuation_zone.geometry.contains(self.geometry):
             self.requires_evacuation = True
 
-        self._recalculate_route()
-
     def _evacuate(self) -> None:
         if self.status == "parked":
             self.in_car = False
 
         self.status = "evacuating"
         # location of evacuation points
-        exit_nodes = self.model.roads.nodes[
-            self.model.roads.nodes.index.str.contains("target", na=False)
-        ]
-        exit_idx = [
-            self.model.roads.nodes.index.get_loc(node) for node in exit_nodes.index
-        ]
+        exits = self.model.space.exits
+
         source_idx = (
             self.route[self.route_index]
             if self.route is not None
@@ -128,10 +122,10 @@ class Evacuee(mg.GeoAgent):
         )
         # calculate minimum distance to each evacuation point
         distances = self.model.roads.i_graph.distances(
-            source=[source_idx], target=exit_idx, weights="length"
+            source=[source_idx], target=self.model.space.exit_idx, weights="length"
         )[0]
         # chose nearest evacuation point
-        exit = exit_nodes.iloc[int(np.argmin(distances))]
+        exit = exits[int(np.argmin(distances))]
         self._path_select((exit.geometry.x, exit.geometry.y))
 
     def _update_location(self):
@@ -153,7 +147,7 @@ class Evacuee(mg.GeoAgent):
         # if agent will begin evacuating this step
         if (
             self.model.evacuating
-            and self.status != "evacuating"
+            and self.status not in ["evacuating", "queuing"]
             and self.model.simulation_time - self.model.evacuation_start_time
             >= self.evacuation_delay
             and self.model.space.evacuation_zone.geometry.contains(self.geometry)
@@ -208,18 +202,20 @@ class Evacuee(mg.GeoAgent):
                     ]
                     # if the path is clear
                     if len(agents_in_path) == 0:
+                        if (
+                            self.model.evacuating
+                            and not self.requires_evacuation
+                            and self.model.roads.nodes.iloc[
+                                self.route[self.route_index + 1]
+                            ].name
+                            not in self.model.safe_roads.nodes.index.to_list()
+                        ):
+                            self.status = "queuing"
+                            return
+
                         distance_to_travel -= self._distance_to_next_node()
                         self.route_index += 1
                         self.distance_along_edge = 0
-
-                        # if target is reached
-                        if self.route_index >= len(self.route) - 1:
-                            self.model.space.move_evacuee(
-                                self,
-                                self.model.roads.get_coords_from_idx(self.route[-1]),
-                            )
-                            self._arrive_at_destination()
-                            return
 
                         self.model.space.move_evacuee(
                             self,
@@ -227,6 +223,12 @@ class Evacuee(mg.GeoAgent):
                                 self.route[self.route_index]
                             ),
                         )
+
+                        # if target is reached
+                        if self.route_index == len(self.route) - 1:
+                            self._arrive_at_destination()
+                            return
+
                     # if the agent's path is blocked by other agents
                     else:
                         nearest_agent_distance = sorted(
@@ -262,19 +264,20 @@ class Evacuee(mg.GeoAgent):
             self.leave_time = self.model.simulation_time.time()
 
     def _distance_to_next_node(self) -> float:
+        origin_node = self.model.roads.nodes.iloc[self.route[self.route_index]]
         try:
-            origin_node = self.model.roads.nodes.iloc[self.route[self.route_index]]
             destination_node = self.model.roads.nodes.iloc[
                 self.route[self.route_index + 1]
             ]
-            edge = self.model.roads.nx_graph.get_edge_data(
-                origin_node.name,
-                destination_node.name,
-            )[0]
-            return edge["length"] - self.distance_along_edge
-        except Exception as e:
-            print(e)
+        except:
+            print(self.route_index, self.route)
             return 0
+
+        edge = self.model.roads.nx_graph.get_edge_data(
+            origin_node.name,
+            destination_node.name,
+        )[0]
+        return edge["length"] - self.distance_along_edge
 
     def _response_time(self) -> timedelta:
         seconds = np.random.normal(300, 120)

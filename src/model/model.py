@@ -3,7 +3,7 @@ import mesa_geo as mg
 import geopandas as gpd
 from networkx import write_gml
 import osmnx as ox
-from shapely import Polygon, Point, difference
+from shapely import Polygon, Point
 from geopandas import GeoDataFrame
 import uuid
 import random
@@ -70,7 +70,7 @@ class EvacuationModel(mesa.Model):
         super().__init__()
         self.city = city
         self.schedule = mesa.time.RandomActivation(self)
-        self.space = City(crs="EPSG:27700")
+        self.space = City(crs="EPSG:27700", model=self)
         self.num_agents = num_agents
         self.output_path = output_path
         self._load_domain_from_file(domain_path)
@@ -133,6 +133,7 @@ class EvacuationModel(mesa.Model):
         self.simulation_time += self.TIMESTEP
 
         if not self.evacuating and self.evacuation_start_time <= self.simulation_time:
+            print("Evacuation started")
             self.evacuating = True
             self._start_evacuation(self.bomb_location, self.evacuation_zone_radius)
 
@@ -258,9 +259,8 @@ class EvacuationModel(mesa.Model):
         self.space.add_evacuation_zone(evacuation_zone)
         self.space.add_exits(exits)
         self.schedule.add(evacuation_zone)
-        self.roads.add_exits_to_graph(evacuation_zone.exits)
-        save_zone = difference(self.domain, evacuation_zone.geometry)
-        self.safe_roads = CityRoads(self.city, save_zone)
+        self.safe_roads = CityRoads(self.city, self.domain)
+        self.safe_roads.remove_nodes_in_polygon(evacuation_zone.geometry)
 
         for agent in self.space.evacuees:
             agent.evacuate()

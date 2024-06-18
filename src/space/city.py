@@ -1,4 +1,6 @@
-from typing import DefaultDict, Dict, Optional, Set, Tuple
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, DefaultDict, Dict, Optional, Set, Tuple
 from collections import defaultdict
 import mesa
 import mesa_geo as mg
@@ -17,10 +19,15 @@ from src.agent.building import (
 from src.agent.evacuation_zone import EvacuationZone, EvacuationZoneExit
 from src.agent.evacuee import Evacuee
 
+if TYPE_CHECKING:
+    from src.model.model import EvacuationModel
+
 
 class City(mg.GeoSpace):
+    model: EvacuationModel
     evacuation_zone: EvacuationZone
     exits: Tuple[EvacuationZoneExit]
+    exit_idx: list[int]
     homes: Tuple[Building]
     work_buildings: Tuple[Building]
     recreation_buildings: Tuple[Building]
@@ -40,8 +47,9 @@ class City(mg.GeoSpace):
     def buildings(self) -> list[Building]:
         return list(self._buildings.values())
 
-    def __init__(self, crs: str) -> None:
+    def __init__(self, crs: str, model: EvacuationModel) -> None:
         super().__init__(crs=crs)
+        self.model = model
         self.exits = ()
         self.homes = ()
         self.work_buildings = ()
@@ -140,6 +148,16 @@ class City(mg.GeoSpace):
     def add_exits(self, agents) -> None:
         super().add_agents(agents)
         self.exits = self.exits + tuple(agents)
+        self.exit_idx = list(
+            set(
+                [
+                    self.model.roads.get_nearest_node_idx(
+                        (exit.geometry.x, exit.geometry.y)
+                    )
+                    for exit in self.exits
+                ]
+            )
+        )
 
     def update_home_counter(
         self,

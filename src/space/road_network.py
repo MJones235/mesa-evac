@@ -3,6 +3,7 @@ from scipy.spatial import cKDTree
 import pyproj
 from geopandas import GeoDataFrame
 from shapely import Polygon, Point
+from shapely.ops import transform
 import osmnx as ox
 import mesa
 import pickle
@@ -65,6 +66,12 @@ class RoadNetwork:
         _, [node_idx] = self._kd_tree.query([list(float_pos)])
         return node_idx
 
+    def get_nearest_nodes_idx(
+        self, float_pos: list[mesa.space.FloatCoordinate]
+    ) -> list[int]:
+        _, node_idx = self._kd_tree.query([list(coords) for coords in float_pos])
+        return node_idx
+
     def get_nearest_node_coords(
         self, float_pos: mesa.space.FloatCoordinate
     ) -> mesa.space.FloatCoordinate:
@@ -105,6 +112,19 @@ class RoadNetwork:
             0
         ][0]
 
+    def remove_nodes_in_polygon(self, polygon: Polygon) -> None:
+        project = pyproj.Transformer.from_crs(
+            pyproj.CRS("EPSG:27700"), pyproj.CRS("EPSG:4326"), always_xy=True
+        ).transform
+        polygon_4326 = transform(project, polygon)
+        G = ox.graph_from_polygon(polygon_4326, simplify=False)
+        G = ox.project_graph(G, to_crs="EPSG:27700")
+        G = G.to_undirected()
+        G = G.subgraph(max(nx.connected_components(G), key=len))
+        H = self.nx_graph.copy()
+        H.remove_nodes_from(list(G.nodes))
+        self.nx_graph = H
+
 
 class CityRoads(RoadNetwork):
     city: str
@@ -138,40 +158,6 @@ class CityRoads(RoadNetwork):
         self, source: mesa.space.FloatCoordinate, target: mesa.space.FloatCoordinate
     ) -> list[mesa.space.FloatCoordinate] | None:
         return self._path_select_cache.get((source, target), None)
-
-    def add_exits_to_graph(self, exits: GeoDataFrame) -> None:
-        for index, exit in exits.iterrows():
-            G = self.nx_graph.copy()
-            # find the road that the target is on
-            [start_node, end_node, _] = ox.distance.nearest_edges(
-                G, exit.geometry.x, exit.geometry.y
-            )
-            # find the distance from the target to each end of the road
-            d_start = self._calculate_distance(
-                Point(
-                    G.nodes[start_node]["x"],
-                    G.nodes[start_node]["y"],
-                ),
-                Point(exit.geometry.x, exit.geometry.y),
-            )
-            d_end = self._calculate_distance(
-                Point(
-                    G.nodes[end_node]["x"],
-                    G.nodes[end_node]["y"],
-                ),
-                Point(exit.geometry.x, exit.geometry.y),
-            )
-
-            id = "target{0}".format(index[1])
-            edge_attrs = G[start_node][end_node]
-            # remove the old road
-            G.remove_edge(start_node, end_node)
-            # add target node
-            G.add_node(id, x=exit.geometry.x, y=exit.geometry.y, street_count=2)
-            # add two new roads connecting the target to each end of the old road
-            G.add_edge(start_node, id, **{**edge_attrs, "length": d_start})
-            G.add_edge(id, end_node, **{**edge_attrs, "length": d_end})
-            self.nx_graph = G
 
     def _calculate_distance(self, point1: Point, point2: Point):
         df = GeoDataFrame({"geometry": [point1, point2]}, crs="EPSG:27700")

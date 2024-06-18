@@ -19,50 +19,40 @@ def create_video(output_path: str) -> None:
     f, ax = ox.plot_graph(graph, show=False, node_size=0, edge_linewidth=0.5)
 
     with writer.saving(f, output_path + ".mp4", f.dpi):
-        pedestrians_df = evacuee_df[
-            (evacuee_df["in_car"] == False) | (evacuee_df["status"] != "travelling")
-        ]
-        motorists_df = evacuee_df[
-            (evacuee_df["in_car"] == True) & (evacuee_df["status"] == "travelling")
-        ]
-
-        pedestrians_at_start = pedestrians_df.loc[[0]].location
-        pedestrians = ax.scatter(
-            [point.x for point in pedestrians_at_start],
-            [point.y for point in pedestrians_at_start],
-            s=2,
-            color="red",
+        evacuees_at_start = evacuee_df.loc[[0]]
+        evacuees = ax.scatter(
+            [point.x for point in evacuees_at_start.location],
+            [point.y for point in evacuees_at_start.location],
         )
-
-        motorists_at_start = motorists_df.loc[[0]].location
-        motorists = ax.scatter(
-            [point.x for point in motorists_at_start],
-            [point.y for point in motorists_at_start],
-            s=2,
-            color="blue",
+        evacuees.set_color(
+            [
+                (
+                    "blue"
+                    if evacuee.in_car and evacuee.status == "travelling"
+                    else "yellow" if evacuee.status == "queuing" else "red"
+                )
+                for (_, evacuee) in evacuees_at_start.iterrows()
+            ]
         )
 
         evacuation_zone_drawn = False
 
         for step in model_df.index:
-            pedestrians_at_step = pedestrians_df.loc[[step]].location
-            pedestrians.set_offsets(
+            evacuees_at_step = evacuee_df.loc[[step]]
+            evacuees.set_offsets(
                 np.stack(
                     [
-                        [point.x for point in pedestrians_at_step],
-                        [point.y for point in pedestrians_at_step],
+                        [point.x for point in evacuees_at_step.location],
+                        [point.y for point in evacuees_at_step.location],
                     ]
                 ).T
             )
 
-            motorists_at_step = motorists_df.loc[[step]].location
-            motorists.set_offsets(
-                np.stack(
-                    [
-                        [point.x for point in motorists_at_step],
-                        [point.y for point in motorists_at_step],
-                    ]
-                ).T
+            evacuees.set_sizes(
+                [
+                    20 if evacuee.status == "queuing" else 2
+                    for (_, evacuee) in evacuees_at_step.iterrows()
+                ]
             )
 
             if not evacuation_zone_drawn and model_df.iloc[step].evacuation_started:

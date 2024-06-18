@@ -4,7 +4,7 @@ from scripts.create_video import create_video
 
 
 class CreateVideoTest(TestCase):
-    output_path = "outputs/newcastle-md/20240614190617/20240614190617"
+    output_path = "outputs/newcastle-md/20240618162644/20240618162644"
 
     def test_create_video(self):
         create_video(self.output_path)
