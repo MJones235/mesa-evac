@@ -22,7 +22,7 @@ from src.agent.evacuee import Evacuee
 from src.agent.evacuation_zone import EvacuationZone, EvacuationZoneExit
 from src.agent.road import Road
 from src.space.city import City
-from src.space.road_network import CityRoads
+from src.space.road_network import RoadNetwork
 import pandas as pd
 
 
@@ -37,8 +37,8 @@ def get_is_evacuation_started(model) -> bool:
 class EvacuationModel(mesa.Model):
     schedule: mesa.time.RandomActivation
     space: City
-    roads: CityRoads
-    safe_roads: CityRoads
+    roads: RoadNetwork
+    safe_roads: RoadNetwork
     domain: Polygon
     num_agents: int
 
@@ -76,7 +76,7 @@ class EvacuationModel(mesa.Model):
         self._load_domain_from_file(domain_path)
         self._load_agent_data_from_file(agent_data_path)
         self._load_buildings()
-        self.roads = CityRoads(city, self.domain)
+        self.roads = RoadNetwork(self.domain)
         if visualise_roads:
             self._load_roads()
         self._set_building_entrance()
@@ -259,7 +259,7 @@ class EvacuationModel(mesa.Model):
         self.space.add_evacuation_zone(evacuation_zone)
         self.space.add_exits(exits)
         self.schedule.add(evacuation_zone)
-        self.safe_roads = CityRoads(self.city, self.domain)
+        self.safe_roads = RoadNetwork(self.domain)
         self.safe_roads.remove_nodes_in_polygon(evacuation_zone.geometry)
 
         for agent in self.space.evacuees:

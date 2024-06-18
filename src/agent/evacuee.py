@@ -106,29 +106,33 @@ class Evacuee(mg.GeoAgent):
 
         return position
 
+    # identify agents that need to be evacuated
+    # agents outside the evacuatioin zone will not be able to enter the evacuation zone from this pointdd
     def evacuate(self) -> None:
         if self.model.space.evacuation_zone.geometry.contains(self.geometry):
             self.requires_evacuation = True
 
     def _evacuate(self) -> None:
+        # if agents are currently in a building, they will evacuate on foot, even if they arrived by car
         if self.status == "parked":
             self.in_car = False
 
         self.status = "evacuating"
-        # location of evacuation points
-        exits = self.model.space.exits
 
+        # current location index
         source_idx = (
             self.route[self.route_index]
             if self.route is not None
             else self.roads.get_nearest_node_idx((self.geometry.x, self.geometry.y))
         )
+
         # calculate minimum distance to each evacuation point
         distances = self.roads.i_graph.distances(
             source=[source_idx], target=self.model.space.exit_idx, weights="length"
         )[0]
+
         # chose nearest evacuation point
-        exit = exits[int(np.argmin(distances))]
+        exit = self.model.space.exits[int(np.argmin(distances))]
         self._path_select((exit.geometry.x, exit.geometry.y))
 
     def _update_location(self):
@@ -149,13 +153,15 @@ class Evacuee(mg.GeoAgent):
     def _move(self) -> None:
         # if agent will begin evacuating this step
         if (
-            self.model.evacuating
-            and self.status != "evacuating"
+            self.model.evacuating  # evacuation has started
+            and self.status != "evacuating"  # agent has not already begun to evacuate
             and self.model.simulation_time - self.model.evacuation_start_time
-            >= self.evacuation_delay
-            and self.model.space.evacuation_zone.geometry.contains(self.geometry)
+            >= self.evacuation_delay  # agent's assigned evacuation delay has elapsed (to account for time taken to communicate evacuation and exit building)
+            and self.model.space.evacuation_zone.geometry.contains(
+                self.geometry
+            )  # agent is currently in evacuation zone
         ):
-            self.on_safe_roads = False
+            self.on_safe_roads = False  # agent will have to traverse roads within the evacuation zone in order to leave
             self._evacuate()
         else:
             # if the agent will leave their current location this step
@@ -170,27 +176,19 @@ class Evacuee(mg.GeoAgent):
                 self.destination_building = self.schedule.building_from_node_name(
                     self.destination_schedule_node
                 )
-                if self.model.evacuating:
-                    while self.model.space.evacuation_zone.geometry.contains(
-                        Point(self.destination_building.entrance_pos)
-                    ):
-                        self.destination_building = self.model.space.get_random_home()
                 self._path_select(self.destination_building.entrance_pos)
                 self.status = "travelling"
 
             # if the agent is currently travelling
-            if (
-                self.route is not None
-                and self.status == "travelling"
-                or self.status == "evacuating"
-            ):
+            if self.route is not None and self.status in ["travelling", "evacuating"]:
                 # distance in metres travelled in timestep
                 distance_to_travel = (
                     self.speed / 60 / 60 * self.model.TIMESTEP.seconds * 1000
                 )
 
-                if self.route_index == len(self.route) - 1:
+                if self.route_index == len(self.route) - 1 or len(self.route) < 2:
                     self._arrive_at_destination()
+                    return
 
                 # if agent passes through one or more nodes during the step
                 while distance_to_travel >= self._distance_to_next_node():
@@ -239,7 +237,7 @@ class Evacuee(mg.GeoAgent):
                                     self._path_select(house.entrance_pos)
                             finally:
                                 self.status = "travelling"
-                                if self.route is None:
+                                if self.route is None or len(self.route) < 2:
                                     self.status = "parked"
                                     self.leave_time = self.model.simulation_time.time()
                                     return
@@ -250,7 +248,7 @@ class Evacuee(mg.GeoAgent):
 
                         self.model.space.move_evacuee(
                             self,
-                            self.roads.get_coords_from_idx(
+                            self.model.roads.get_coords_from_idx(
                                 self.route[self.route_index]
                             ),
                         )
@@ -282,8 +280,8 @@ class Evacuee(mg.GeoAgent):
     def _path_select(self, destination: mesa.space.FloatCoordinate) -> None:
         self.route_index = 0
         self.distance_along_edge = 0
-        self.route = self.roads.shortest_path(
-            origin=(self.geometry.x, self.geometry.y), destination=destination
+        self.route = self.roads.get_shortest_path(
+            (self.geometry.x, self.geometry.y), destination
         )
         if len(self.route) < 2:
             self.status = "parked"
@@ -297,17 +295,13 @@ class Evacuee(mg.GeoAgent):
             )
 
     def _distance_to_next_node(self) -> float:
-        try:
-            origin_node = self.roads.nodes.iloc[self.route[self.route_index]]
-            destination_node = self.roads.nodes.iloc[self.route[self.route_index + 1]]
-            edge = self.roads.nx_graph.get_edge_data(
-                origin_node.name,
-                destination_node.name,
-            )[0]
-            return edge["length"] - self.distance_along_edge
-        except:
-            print("unable to get distance to next node")
-            return 0
+        origin_node = self.roads.nodes.iloc[self.route[self.route_index]]
+        destination_node = self.roads.nodes.iloc[self.route[self.route_index + 1]]
+        edge = self.roads.nx_graph.get_edge_data(
+            origin_node.name,
+            destination_node.name,
+        )[0]
+        return edge["length"] - self.distance_along_edge
 
     def _response_time(self) -> timedelta:
         seconds = np.random.normal(300, 120)
@@ -334,6 +328,7 @@ class Evacuee(mg.GeoAgent):
             self.leave_time = self.model.simulation_time.time()
             self.destination_schedule_node = None
             self.destination_building = None
+            self.on_safe_roads = True
         # otherwise, agent will enter a building
         else:
             self.model.space.move_evacuee(

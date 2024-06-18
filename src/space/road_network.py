@@ -2,11 +2,10 @@ import networkx as nx
 from scipy.spatial import cKDTree
 import pyproj
 from geopandas import GeoDataFrame
-from shapely import Polygon, Point
+from shapely import Polygon
 from shapely.ops import transform
 import osmnx as ox
 import mesa
-import pickle
 import numpy as np
 import igraph
 
@@ -124,70 +123,3 @@ class RoadNetwork:
         H = self.nx_graph.copy()
         H.remove_nodes_from(list(G.nodes))
         self.nx_graph = H
-
-
-class CityRoads(RoadNetwork):
-    city: str
-    _path_select_cache: dict[
-        tuple[mesa.space.FloatCoordinate, mesa.space.FloatCoordinate],
-        list[mesa.space.FloatCoordinate],
-    ]
-
-    def __init__(self, city, domain: Polygon) -> None:
-        super().__init__(domain)
-        self.city = city
-        self._path_cache_result = f"outputs/{city}_path_cache_result.pkl"
-        try:
-            with open(self._path_cache_result, "rb") as cached_result:
-                self._path_select_cache = pickle.load(cached_result)
-        except FileNotFoundError:
-            self._path_select_cache = {}
-
-    def cache_path(
-        self,
-        source: mesa.space.FloatCoordinate,
-        target: mesa.space.FloatCoordinate,
-        path: list[mesa.space.FloatCoordinate],
-    ) -> None:
-        self._path_select_cache[(source, target)] = path
-        self._path_select_cache[(target, source)] = list(reversed(path))
-        with open(self._path_cache_result, "wb") as cached_result:
-            pickle.dump(self._path_select_cache, cached_result)
-
-    def get_cached_path(
-        self, source: mesa.space.FloatCoordinate, target: mesa.space.FloatCoordinate
-    ) -> list[mesa.space.FloatCoordinate] | None:
-        return self._path_select_cache.get((source, target), None)
-
-    def _calculate_distance(self, point1: Point, point2: Point):
-        df = GeoDataFrame({"geometry": [point1, point2]}, crs="EPSG:27700")
-        return ox.distance.euclidean(
-            df.geometry.iloc[0].y,
-            df.geometry.iloc[0].x,
-            df.geometry.iloc[1].y,
-            df.geometry.iloc[1].x,
-        )
-
-    def shortest_path(
-        self,
-        origin: mesa.space.FloatCoordinate,
-        destination: mesa.space.FloatCoordinate,
-    ) -> list[mesa.space.FloatCoordinate]:
-        if (
-            cached_path := self.get_cached_path(
-                source=origin,
-                target=destination,
-            )
-        ) is not None:
-            return cached_path
-        else:
-            route = self.get_shortest_path(
-                source=origin,
-                target=destination,
-            )
-            self.cache_path(
-                source=origin,
-                target=destination,
-                path=route,
-            )
-            return route
