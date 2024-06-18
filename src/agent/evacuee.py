@@ -127,7 +127,7 @@ class Evacuee(mg.GeoAgent):
             )
         )
         # calculate minimum distance to each evacuation point
-        distances = self.model.roads.i_graph.shortest_paths_dijkstra(
+        distances = self.model.roads.i_graph.distances(
             source=[source_idx], target=exit_idx, weights="length"
         )[0]
         # chose nearest evacuation point

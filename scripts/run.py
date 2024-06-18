@@ -15,6 +15,7 @@ def make_parser():
     parser = argparse.ArgumentParser("Evacuation Model")
     parser.add_argument("--city", type=str, required=True)
     parser.add_argument("--interactive", action="store_true")
+    parser.add_argument("--steps", type=int, default=100)
     return parser
 
 
@@ -57,7 +58,7 @@ def run_interactively(data_file_prefix: str) -> None:
     server.launch()
 
 
-def run_and_generate_video(data_file_prefix: str) -> None:
+def run_and_generate_video(data_file_prefix: str, steps: int) -> None:
     current_time = datetime.fromtimestamp(time.time()).strftime("%Y%m%d%H%M%S")
     output_path = f"outputs/{data_file_prefix}/{current_time}"
 
@@ -76,7 +77,7 @@ def run_and_generate_video(data_file_prefix: str) -> None:
         simulation_start_h=8,
         simulation_start_m=28,
         output_path=output_path + f"/{current_time}",
-    ).run(100)
+    ).run(steps)
 
     create_video(output_path + f"/{current_time}")
 
@@ -95,4 +96,4 @@ if __name__ == "__main__":
     if args.interactive:
         run_interactively(data_file_prefix)
     else:
-        run_and_generate_video(data_file_prefix)
+        run_and_generate_video(data_file_prefix, args.steps)
