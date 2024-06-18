@@ -1,14 +1,12 @@
-import pandas as pd
-import geopandas as gpd
-import networkx as nx
 import osmnx as ox
-from matplotlib import animation, pyplot
-from shapely import wkt
+from matplotlib import animation
 import numpy as np
+
+from scripts.load_data_from_file import load_data_from_file
 
 
 def create_video(output_path: str) -> None:
-    (agent_df, model_df, graph, nodes, evacuation_zone, exits) = load_data_from_file(
+    (agent_df, model_df, graph, nodes, evacuation_zone, exits, _) = load_data_from_file(
         output_path
     )
 
@@ -73,16 +71,3 @@ def create_video(output_path: str) -> None:
                 evacuation_zone_drawn = True
 
             writer.grab_frame()
-
-
-def load_data_from_file(output_path: str) -> None:
-    agent_df = pd.read_csv(output_path + ".agent.csv", index_col="Step")
-    agent_df["location"] = agent_df["location"].apply(wkt.loads)
-    model_df = pd.read_csv(output_path + ".model.csv")
-    graph = nx.read_gml(output_path + ".gml")
-    nodes, _ = ox.convert.graph_to_gdfs(graph)
-    gpkg = output_path + ".gpkg"
-    evacuation_zone = gpd.read_file(gpkg, layer="evacuation_zone")
-    exits = gpd.read_file(gpkg, layer="exits")
-
-    return agent_df, model_df, graph, nodes, evacuation_zone, exits

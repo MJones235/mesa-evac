@@ -211,17 +211,22 @@ class Evacuee(mg.GeoAgent):
                         distance_to_travel -= self._distance_to_next_node()
                         self.route_index += 1
                         self.distance_along_edge = 0
+
+                        # if target is reached
+                        if self.route_index >= len(self.route) - 1:
+                            self.model.space.move_evacuee(
+                                self,
+                                self.model.roads.get_coords_from_idx(self.route[-1]),
+                            )
+                            self._arrive_at_destination()
+                            return
+
                         self.model.space.move_evacuee(
                             self,
                             self.model.roads.get_coords_from_idx(
                                 self.route[self.route_index]
                             ),
                         )
-
-                        # if target is reached
-                        if self.route_index == len(self.route) - 1:
-                            self._arrive_at_destination()
-                            return
                     # if the agent's path is blocked by other agents
                     else:
                         nearest_agent_distance = sorted(
@@ -267,7 +272,8 @@ class Evacuee(mg.GeoAgent):
                 destination_node.name,
             )[0]
             return edge["length"] - self.distance_along_edge
-        except:
+        except Exception as e:
+            print(e)
             return 0
 
     def _response_time(self) -> timedelta:

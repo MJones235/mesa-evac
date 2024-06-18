@@ -18,5 +18,7 @@ class EvacuationZone(mg.GeoAgent):
 
 
 class EvacuationZoneExit(mg.GeoAgent):
+    type = "exit"
+
     def __init__(self, unique_id, model, geometry, crs):
         super().__init__(unique_id, model, geometry, crs)

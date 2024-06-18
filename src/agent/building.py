@@ -4,7 +4,6 @@ import pyproj.crs
 from shapely.geometry import Polygon
 import pyproj
 import uuid
-from random import randrange
 
 
 class Building(mg.GeoAgent):
@@ -24,30 +23,42 @@ class Building(mg.GeoAgent):
 
 
 class Home(Building):
+    type = "home"
+
     def __init__(self, unique_id, model, geometry, crs) -> None:
         super().__init__(unique_id, model, geometry, crs)
 
 
 class WorkPlace(Building):
+    type = "work"
+
     def __init__(self, unique_id, model, geometry, crs) -> None:
         super().__init__(unique_id, model, geometry, crs)
 
 
 class Supermarket(Building):
+    type = "supermarket"
+
     def __init__(self, unique_id, model, geometry, crs) -> None:
         super().__init__(unique_id, model, geometry, crs)
 
 
 class Shop(Building):
+    type = "shop"
+
     def __init__(self, unique_id, model, geometry, crs) -> None:
         super().__init__(unique_id, model, geometry, crs)
 
 
 class RecreationBuilding(Building):
+    type = "recreation"
+
     def __init__(self, unique_id, model, geometry, crs) -> None:
         super().__init__(unique_id, model, geometry, crs)
 
 
 class School(Building):
+    type = "school"
+
     def __init__(self, unique_id, model, geometry, crs) -> None:
         super().__init__(unique_id, model, geometry, crs)

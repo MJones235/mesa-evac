@@ -279,6 +279,14 @@ class EvacuationModel(mesa.Model):
             output_gpkg, layer="exits", driver="GPKG"
         )
 
+        building_list = [
+            {"geometry": building.geometry, "type": building.type}
+            for building in self.space.buildings
+        ]
+        gpd.GeoDataFrame(building_list, crs="EPSG:27700").to_file(
+            output_gpkg, layer="buildings", driver="GPKG"
+        )
+
 
 def number_evacuated(model: EvacuationModel):
     return len([agent for agent in model.space.evacuees if agent.evacuated])

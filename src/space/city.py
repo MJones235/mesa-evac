@@ -36,6 +36,10 @@ class City(mg.GeoSpace):
     def evacuees(self) -> list[Evacuee]:
         return list(self._evacuee_id_map.values())
 
+    @property
+    def buildings(self) -> list[Building]:
+        return list(self._buildings.values())
+
     def __init__(self, crs: str) -> None:
         super().__init__(crs=crs)
         self.exits = ()
