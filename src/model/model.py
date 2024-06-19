@@ -67,6 +67,8 @@ class EvacuationModel(mesa.Model):
         output_path: str = None,
         visualise_roads: bool = False,
         mean_evacuation_delay_m: int = 300,
+        car_use_pc: int = 50,
+        evacuate_on_foot: bool = True,
     ) -> None:
         super().__init__()
         self.city = city
@@ -91,7 +93,7 @@ class EvacuationModel(mesa.Model):
             date_today, time(hour=evacuation_start_h, minute=evacuation_start_m)
         )
 
-        self._create_evacuees(mean_evacuation_delay_m)
+        self._create_evacuees(mean_evacuation_delay_m, car_use_pc, evacuate_on_foot)
         self.datacollector = mesa.DataCollector(
             model_reporters={
                 "evacuation_started": get_is_evacuation_started,
@@ -104,6 +106,7 @@ class EvacuationModel(mesa.Model):
                 "type": "type",
                 "in_car": lambda x: x.in_car if hasattr(x, "in_car") else None,
                 "status": lambda x: x.status if hasattr(x, "status") else None,
+                "diverted": lambda x: x.diverted if hasattr(x, "diverted") else None,
             },
         )
         self.bomb_location = bomb_location
@@ -224,7 +227,9 @@ class EvacuationModel(mesa.Model):
         roads = road_creator.from_GeoDataFrame(self.roads.edges)
         self.space.add_agents(roads)
 
-    def _create_evacuees(self, mean_evacuation_delay_m: int) -> None:
+    def _create_evacuees(
+        self, mean_evacuation_delay_m: int, car_use_pc: int, evacuate_on_foot: bool
+    ) -> None:
         for _ in range(self.num_agents):
             random_home = self.space.get_random_home()
             random_work = self.space.get_random_work()
@@ -241,6 +246,8 @@ class EvacuationModel(mesa.Model):
                     population=self.agent_data.code, weights=self.agent_data.proportion
                 )[0],
                 mean_evacuation_delay_m=mean_evacuation_delay_m,
+                car_use_pc=car_use_pc,
+                evacuate_on_foot=evacuate_on_foot,
             )
 
             self.space.add_evacuee(evacuee)

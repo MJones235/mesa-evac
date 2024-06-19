@@ -50,6 +50,19 @@ def run_interactively(data_file_prefix: str) -> None:
         "mean_evacuation_delay_m": mesa.visualization.Slider(
             "Mean evacuation delay (min)", value=5, min_value=2, max_value=20, step=1
         ),
+        "car_use_pc": mesa.visualization.Slider(
+            "Car use (%)",
+            value=50,
+            min_value=0,
+            max_value=100,
+            step=1,
+            description="Percentage of agents that travel by car",
+        ),
+        "evacuate_on_foot": mesa.visualization.Checkbox(
+            "Evacuate on foot",
+            value=True,
+            description="If false, agents will leave the evacuation zone by the same method they arrived.  If false, they will leave on foot, unless they are actively driving at the time of the evacuation.",
+        ),
     }
 
     map_element = mg.visualization.MapModule(agent_draw, map_height=600, map_width=600)
@@ -81,6 +94,8 @@ def run_and_generate_video(data_file_prefix: str, steps: int) -> None:
         simulation_start_m=29,
         output_path=output_path + f"/{current_time}",
         mean_evacuation_delay_m=5,
+        car_use_pc=50,
+        evacuate_on_foot=True,
     ).run(steps)
 
     create_video(output_path + f"/{current_time}")

@@ -18,19 +18,13 @@ def agent_draw(agent):
     portrayal["color"] = "Transparent"
     if isinstance(agent, Evacuee):
         portrayal["color"] = (
-            "Blue"
-            if agent.status in ["travelling", "evacuating"] and agent.in_car
-            else "Red"
+            "green" if agent.status == "parked" else "Blue" if agent.in_car else "Red"
         )
         portrayal["radius"] = "1"
         portrayal["opacity"] = "1"
     if isinstance(agent, EvacuationZone):
         portrayal["opacity"] = "0.5"
         portrayal["color"] = "Blue"
-    if isinstance(agent, EvacuationZoneExit):
-        portrayal["opacity"] = "1"
-        portrayal["color"] = "Green"
-        portrayal["radius"] = "2"
     if isinstance(agent, Road):
         portrayal["opacity"] = "1"
         portrayal["color"] = "Green"

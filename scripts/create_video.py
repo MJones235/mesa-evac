@@ -28,9 +28,9 @@ def create_video(output_path: str) -> None:
         evacuees.set_color(
             [
                 (
-                    "blue"
-                    if evacuee.in_car and evacuee.status in ["travelling", "evacuating"]
-                    else "red"
+                    ("Blue" if evacuee.in_car else "Red")
+                    if evacuee.status in ["travelling", "evacuating"]
+                    else "Green"
                 )
                 for (_, evacuee) in evacuees_at_start.iterrows()
             ]
@@ -49,9 +49,24 @@ def create_video(output_path: str) -> None:
                 ).T
             )
 
+            evacuees.set_color(
+                [
+                    (
+                        "Yellow"
+                        if evacuee.diverted
+                        else (
+                            "Green"
+                            if evacuee.status == "parked"
+                            else ("Blue" if evacuee.in_car else "Red")
+                        )
+                    )
+                    for (_, evacuee) in evacuees_at_step.iterrows()
+                ]
+            )
+
             if not evacuation_zone_drawn and model_df.iloc[step].evacuation_started:
                 evacuation_zone.plot(ax=ax, alpha=0.2)
-                ax.scatter(exits.geometry.x, exits.geometry.y, color="#0f9900", s=10)
+                # ax.scatter(exits.geometry.x, exits.geometry.y, color="#0f9900", s=10)
                 evacuation_zone_drawn = True
 
             if evacuation_zone_drawn:

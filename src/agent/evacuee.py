@@ -52,6 +52,7 @@ class Evacuee(mg.GeoAgent):
     requires_evacuation = False
     evacuated = False
     on_safe_roads = False
+    diverted = False
 
     def __init__(
         self,
@@ -63,6 +64,8 @@ class Evacuee(mg.GeoAgent):
         school,
         category,
         mean_evacuation_delay_m,
+        car_use_pc,
+        evacuate_on_foot,
     ) -> None:
         self.model = model
         self.home = home
@@ -70,7 +73,7 @@ class Evacuee(mg.GeoAgent):
         self.school = school
         self.category = category
         self.walking_speed = self.model.agent_data.iloc[category].walking_speed
-        self.in_car = random.choice([True, False])
+        self.in_car = random.choices([True, False], [car_use_pc, 100 - car_use_pc])[0]
         self._set_schedule()
         geometry = self._initialise_position()
 
@@ -78,6 +81,7 @@ class Evacuee(mg.GeoAgent):
 
         self.distance_along_edge = 0
         self.evacuation_delay = self._response_time(mean_evacuation_delay_m)
+        self.evacuate_on_foot = evacuate_on_foot
 
     @property
     def speed(self):
@@ -88,6 +92,7 @@ class Evacuee(mg.GeoAgent):
         return self.model.safe_roads if self.on_safe_roads else self.model.roads
 
     def step(self) -> None:
+        self._prepare_to_move()
         self._move()
 
     def _set_schedule(self) -> None:
@@ -124,17 +129,13 @@ class Evacuee(mg.GeoAgent):
 
     def _evacuate(self) -> None:
         # if agents are currently in a building, they will evacuate on foot, even if they arrived by car
-        if self.status == "parked":
+        if self.status == "parked" and self.evacuate_on_foot:
             self.in_car = False
 
         self.status = "evacuating"
 
         # current location index
-        source_idx = (
-            self.route[self.route_index]
-            if self.route is not None
-            else self.roads.get_nearest_node_idx((self.geometry.x, self.geometry.y))
-        )
+        source_idx = self.roads.get_nearest_node_idx((self.geometry.x, self.geometry.y))
 
         # calculate minimum distance to each evacuation point
         distances = self.roads.i_graph.distances(
@@ -159,8 +160,16 @@ class Evacuee(mg.GeoAgent):
             x = k * destination_node.geometry.x + (1 - k) * origin_node.geometry.x
             y = k * destination_node.geometry.y + (1 - k) * origin_node.geometry.y
             self.model.space.move_evacuee(self, (x, y))
+        if (
+            self.model.evacuating
+            and not self.requires_evacuation
+            and self.model.space.evacuation_zone.geometry.contains(
+                Point(self.geometry.x, self.geometry.y)
+            )
+        ):
+            self._divert()
 
-    def _move(self) -> None:
+    def _prepare_to_move(self) -> None:
         # if agent will begin evacuating this step
         if (
             self.model.evacuating  # evacuation has started
@@ -173,119 +182,139 @@ class Evacuee(mg.GeoAgent):
         ):
             self.on_safe_roads = False  # agent will have to traverse roads within the evacuation zone in order to leave
             self._evacuate()
-        else:
-            # if the agent will leave their current location this step
-            if (
-                self.status == "parked"
-                and self.model.simulation_time.time() > self.leave_time
-            ):
-                # get agent's next destination
-                self.destination_schedule_node = (
-                    self.schedule.get_next_destination_name(self.current_schedule_node)
-                )
+        elif (
+            self.status == "parked"
+            and self.model.simulation_time.time() > self.leave_time
+        ):
+            # get agent's next destination
+            self.destination_schedule_node = self.schedule.get_next_destination_name(
+                self.current_schedule_node
+            )
+
+            if self.destination_schedule_node is not None:
                 self.destination_building = self.schedule.building_from_node_name(
                     self.destination_schedule_node
                 )
                 self._path_select(self.destination_building.entrance_pos)
                 self.status = "travelling"
 
-            # if the agent is currently travelling
-            if self.route is not None and self.status in ["travelling", "evacuating"]:
-                # distance in metres travelled in timestep
-                distance_to_travel = (
-                    self.speed / 60 / 60 * self.model.TIMESTEP.seconds * 1000
-                )
+    def _move(self) -> None:
+        # if the agent is currently travelling
+        if self.route is not None and self.status != "parked":
+            # distance in metres travelled in timestep
+            distance_to_travel = (
+                self.speed / 60 / 60 * self.model.TIMESTEP.seconds * 1000
+            )
 
-                if self.route_index == len(self.route) - 1 or len(self.route) < 2:
-                    self._arrive_at_destination()
-                    return
+            # agent is on the last leg of their journey
+            if self.route_index == len(self.route) - 1 or len(self.route) < 2:
+                self._arrive_at_destination()
+                return
 
-                # if agent passes through one or more nodes during the step
-                while distance_to_travel >= self._distance_to_next_node():
-                    # assume agents cannot overtake.  get agents blocking this agent's path
-                    agents_in_path = [
-                        agent
-                        for agent in self.model.space.evacuees
-                        if agent.unique_id != self.unique_id
-                        and agent.in_car == self.in_car
-                        and agent.route
-                        and agent.route[agent.route_index]
-                        == self.route[self.route_index]
-                        and agent.distance_along_edge > self.distance_along_edge
-                        and agent.distance_along_edge - self.distance_along_edge
-                        < distance_to_travel
-                    ]
-                    # if the path is clear
-                    if len(agents_in_path) == 0:
+            # if agent passes through one or more nodes during the step
+            while distance_to_travel >= self._distance_to_next_node():
+                # agent is currently in safe area and reaches edge of evacuation zone
+                if (
+                    self.model.evacuating
+                    and self.roads.nodes.iloc[self.route[self.route_index]].name
+                    in self.model.safe_roads.nodes.index.to_list()
+                    and self.roads.nodes.iloc[self.route[self.route_index + 1]].name
+                    not in self.model.safe_roads.nodes.index.to_list()
+                ):
+                    self._divert()
+                    if self.route is None or len(self.route) < 2:
+                        self.status = "parked"
+                        self.leave_time = self.model.simulation_time.time()
+                        return
 
-                        # agent reaches edge of evacuation zone
-                        if (
-                            self.model.evacuating
-                            and not self.requires_evacuation
-                            and self.roads.nodes.iloc[
-                                self.route[self.route_index + 1]
-                            ].name
-                            not in self.model.safe_roads.nodes.index.to_list()
-                        ):
-                            # try to reach destination via an alternative route
-                            try:
-                                self.on_safe_roads = True
-                                self._path_select(
-                                    self.destination_building.entrance_pos
-                                )
-                            except:
-                                # else go home (if home is outside evacuation zone)
-                                try:
-                                    self._path_select(self.home.entrance_pos)
-                                except:
-                                    # else go to someone else's home
-                                    house = self.model.space.get_random_home()
-                                    while self.model.space.evacuation_zone.geometry.contains(
-                                        Point(house.entrance_pos)
-                                    ):
-                                        house = self.model.space.get_random_home()
-                                    self._path_select(house.entrance_pos)
-                            finally:
-                                self.status = "travelling"
-                                if self.route is None or len(self.route) < 2:
-                                    self.status = "parked"
-                                    self.leave_time = self.model.simulation_time.time()
-                                    return
+                # assume agents cannot overtake.  get agents blocking this agent's path
+                agents_in_path = [
+                    agent
+                    for agent in self.model.space.evacuees
+                    if agent.unique_id != self.unique_id
+                    and agent.in_car == self.in_car
+                    and agent.route
+                    and agent.route[agent.route_index] == self.route[self.route_index]
+                    and agent.distance_along_edge > self.distance_along_edge
+                    and agent.distance_along_edge - self.distance_along_edge
+                    < distance_to_travel
+                ]
 
-                        distance_to_travel -= self._distance_to_next_node()
-                        self.route_index += 1
-                        self.distance_along_edge = 0
-
+                # if the path is clear
+                if len(agents_in_path) == 0:
+                    distance_to_travel -= self._distance_to_next_node()
+                    self.route_index += 1
+                    self.distance_along_edge = 0
+                    coords = self.model.roads.get_coords_from_idx(
+                        self.route[self.route_index]
+                    )
+                    if (
+                        self.model.evacuating
+                        and not self.requires_evacuation
+                        and self.model.space.evacuation_zone.geometry.contains(
+                            Point(coords)
+                        )
+                    ):
+                        self._divert()
+                        if self.route is None or len(self.route) < 2:
+                            self.status = "parked"
+                            self.leave_time = self.model.simulation_time.time()
+                            return
+                    else:
                         self.model.space.move_evacuee(
                             self,
-                            self.model.roads.get_coords_from_idx(
-                                self.route[self.route_index]
-                            ),
+                            coords,
                         )
 
-                        # if target is reached
-                        if self.route_index == len(self.route) - 1:
-                            self._arrive_at_destination()
-                            return
+                    # if target is reached
+                    if self.route_index == len(self.route) - 1:
+                        self._arrive_at_destination()
+                        return
 
-                    # if the agent's path is blocked by other agents
-                    else:
-                        nearest_agent_distance = sorted(
-                            [agent.distance_along_edge for agent in agents_in_path]
-                        )[0]
+                # if the agent's path is blocked by other agents
+                else:
+                    nearest_agent_distance = sorted(
+                        [agent.distance_along_edge for agent in agents_in_path]
+                    )[0]
 
-                        # travel as far as possible, then queue up behind the nearest agent, leaving the minimum required separation
-                        distance_to_travel = (
-                            nearest_agent_distance
-                            - self.distance_along_edge
-                            - self.min_pedestrian_separation
-                        )
-                        if distance_to_travel < 0:
-                            distance_to_travel = 0
-                        break
+                    # travel as far as possible, then queue up behind the nearest agent, leaving the minimum required separation
+                    distance_to_travel = (
+                        nearest_agent_distance
+                        - self.distance_along_edge
+                        - self.min_pedestrian_separation
+                    )
+                    if distance_to_travel < 0:
+                        distance_to_travel = 0
+                    break
 
-                self.distance_along_edge += distance_to_travel
-                self._update_location()
+            self.distance_along_edge += distance_to_travel
+            self._update_location()
+
+    def _divert(self) -> None:
+        self.diverted = True
+        self.on_safe_roads = True
+        # try to reach destination via an alternative route
+        try:
+            self._path_select(self.destination_building.entrance_pos)
+        except:
+            # else go home (if home is outside evacuation zone)
+            try:
+                if not self.model.space.evacuation_zone.geometry.contains(
+                    Point(self.home.entrance_pos)
+                ):
+                    self._path_select(self.home.entrance_pos)
+                else:
+                    raise Exception("house inside evacuation zone")
+            except:
+                # else go to someone else's home
+                house = self.model.space.get_random_home()
+                while self.model.space.evacuation_zone.geometry.contains(
+                    Point(house.entrance_pos)
+                ):
+                    house = self.model.space.get_random_home()
+                self._path_select(house.entrance_pos)
+        finally:
+            self.status = "travelling"
 
     def _path_select(self, destination: mesa.space.FloatCoordinate) -> None:
         self.route_index = 0
@@ -293,15 +322,21 @@ class Evacuee(mg.GeoAgent):
         self.route = self.roads.get_shortest_path(
             (self.geometry.x, self.geometry.y), destination
         )
-        if len(self.route) < 2:
+
+        if self.route is None or len(self.route) < 2:
             self.status = "parked"
             self.route = None
             self.leave_time = self.model.simulation_time.time()
 
+            if self.route is not None and len(self.route) == 1:
+                self.model.space.move_evacuee(
+                    self,
+                    self.roads.get_coords_from_idx(self.route[0]),
+                )
         else:
             self.model.space.move_evacuee(
                 self,
-                self.roads.get_coords_from_idx(self.route[self.route_index]),
+                self.roads.get_coords_from_idx(self.route[0]),
             )
 
     def _distance_to_next_node(self) -> float:
@@ -333,12 +368,12 @@ class Evacuee(mg.GeoAgent):
     def _arrive_at_destination(self) -> None:
         # if the agent has just left the evacuation zone, stop and decide where to go next
         if self.status == "evacuating" or self.destination_building is None:
+            self.on_safe_roads = True
             self.evacuated = True
             self.status = "parked"
             self.leave_time = self.model.simulation_time.time()
             self.destination_schedule_node = None
             self.destination_building = None
-            self.on_safe_roads = True
         # otherwise, agent will enter a building
         else:
             self.model.space.move_evacuee(
