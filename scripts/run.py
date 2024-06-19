@@ -47,6 +47,9 @@ def run_interactively(data_file_prefix: str) -> None:
         "evacuation_start_m": mesa.visualization.Slider(
             "Evacuation start time (min)", value=0, min_value=0, max_value=59, step=1
         ),
+        "mean_evacuation_delay_m": mesa.visualization.Slider(
+            "Mean evacuation delay (min)", value=5, min_value=2, max_value=20, step=1
+        ),
     }
 
     map_element = mg.visualization.MapModule(agent_draw, map_height=600, map_width=600)
@@ -77,6 +80,7 @@ def run_and_generate_video(data_file_prefix: str, steps: int) -> None:
         simulation_start_h=8,
         simulation_start_m=29,
         output_path=output_path + f"/{current_time}",
+        mean_evacuation_delay_m=5,
     ).run(steps)
 
     create_video(output_path + f"/{current_time}")

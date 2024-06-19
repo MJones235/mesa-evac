@@ -53,7 +53,17 @@ class Evacuee(mg.GeoAgent):
     evacuated = False
     on_safe_roads = False
 
-    def __init__(self, unique_id, model, crs, home, work, school, category) -> None:
+    def __init__(
+        self,
+        unique_id,
+        model,
+        crs,
+        home,
+        work,
+        school,
+        category,
+        mean_evacuation_delay_m,
+    ) -> None:
         self.model = model
         self.home = home
         self.work = work
@@ -67,7 +77,7 @@ class Evacuee(mg.GeoAgent):
         super().__init__(unique_id, model, geometry, crs)
 
         self.distance_along_edge = 0
-        self.evacuation_delay = self._response_time()
+        self.evacuation_delay = self._response_time(mean_evacuation_delay_m)
 
     @property
     def speed(self):
@@ -303,8 +313,8 @@ class Evacuee(mg.GeoAgent):
         )[0]
         return edge["length"] - self.distance_along_edge
 
-    def _response_time(self) -> timedelta:
-        seconds = np.random.normal(300, 120)
+    def _response_time(self, mean_evacuation_delay_m: int) -> timedelta:
+        seconds = np.random.normal(mean_evacuation_delay_m * 60, 120)
         seconds = seconds if seconds > 0 else 0.0
         return timedelta(seconds=seconds)
 

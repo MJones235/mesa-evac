@@ -66,6 +66,7 @@ class EvacuationModel(mesa.Model):
         simulation_start_m: int,
         output_path: str = None,
         visualise_roads: bool = False,
+        mean_evacuation_delay_m: int = 300,
     ) -> None:
         super().__init__()
         self.city = city
@@ -90,7 +91,7 @@ class EvacuationModel(mesa.Model):
             date_today, time(hour=evacuation_start_h, minute=evacuation_start_m)
         )
 
-        self._create_evacuees()
+        self._create_evacuees(mean_evacuation_delay_m)
         self.datacollector = mesa.DataCollector(
             model_reporters={
                 "evacuation_started": get_is_evacuation_started,
@@ -223,7 +224,7 @@ class EvacuationModel(mesa.Model):
         roads = road_creator.from_GeoDataFrame(self.roads.edges)
         self.space.add_agents(roads)
 
-    def _create_evacuees(self) -> None:
+    def _create_evacuees(self, mean_evacuation_delay_m: int) -> None:
         for _ in range(self.num_agents):
             random_home = self.space.get_random_home()
             random_work = self.space.get_random_work()
@@ -239,6 +240,7 @@ class EvacuationModel(mesa.Model):
                 category=random.choices(
                     population=self.agent_data.code, weights=self.agent_data.proportion
                 )[0],
+                mean_evacuation_delay_m=mean_evacuation_delay_m,
             )
 
             self.space.add_evacuee(evacuee)
