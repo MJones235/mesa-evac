@@ -319,12 +319,12 @@ class RetiredAdultSchedule(Schedule):
     ]
 
     _edges = [
-        ("home", "supermarket", {"p": 0.5}),
-        ("home", "shop", {"p": 0.5}),
+        ("home", "supermarket", {"p": 0.7}),
+        ("home", "shop", {"p": 0.3}),
         ("supermarket", "home 2", {"p": 1}),
         ("shop", "home 2", {"p": 1}),
-        ("home 2", "recreation", {"p": 0.5}),
-        ("home 2", "home 3", {"p": 0.5}),
+        ("home 2", "recreation", {"p": 0.8}),
+        ("home 2", "home 3", {"p": 0.2}),
         ("recreation", "home 3", {"p": 1}),
     ]
 

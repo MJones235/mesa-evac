@@ -135,7 +135,9 @@ class Evacuee(mg.GeoAgent):
         self.status = "evacuating"
 
         # current location index
-        source_idx = self.roads.get_nearest_node_idx((self.geometry.x, self.geometry.y))
+        source_idx = self.model.roads.get_nearest_node_idx(
+            (self.geometry.x, self.geometry.y)
+        )
 
         # calculate minimum distance to each evacuation point
         distances = self.roads.i_graph.distances(
@@ -143,7 +145,7 @@ class Evacuee(mg.GeoAgent):
         )[0]
 
         # chose nearest evacuation point
-        exit = self.model.space.exits[int(np.argmin(distances))]
+        exit = self.model.space.exits[np.argmin(distances)]
         self._path_select((exit.geometry.x, exit.geometry.y))
 
     def _update_location(self):

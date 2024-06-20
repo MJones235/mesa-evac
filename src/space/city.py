@@ -147,17 +147,20 @@ class City(mg.GeoSpace):
 
     def add_exits(self, agents) -> None:
         super().add_agents(agents)
-        self.exits = self.exits + tuple(agents)
-        self.exit_idx = list(
-            set(
-                [
-                    self.model.roads.get_nearest_node_idx(
-                        (exit.geometry.x, exit.geometry.y)
-                    )
-                    for exit in self.exits
-                ]
-            )
-        )
+        exits = list(self.exits + tuple(agents))
+        exit_idx = [
+            self.model.roads.get_nearest_node_idx((exit.geometry.x, exit.geometry.y))
+            for exit in exits
+        ]
+
+        duplicates = [idx for idx, val in enumerate(exit_idx) if val in exit_idx[:idx]]
+
+        for duplicate in sorted(duplicates, reverse=True):
+            del exits[duplicate]
+            del exit_idx[duplicate]
+
+        self.exits = tuple(exits)
+        self.exit_idx = exit_idx
 
     def update_home_counter(
         self,
