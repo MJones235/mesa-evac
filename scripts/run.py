@@ -8,7 +8,7 @@ import os
 
 from scripts.create_video import create_video
 from src.model.model import EvacuationModel
-from src.visualisation.server import agent_draw, clock_element
+from src.visualisation.server import agent_draw, clock_element, number_evacuated_element
 
 
 def make_parser():
@@ -68,7 +68,10 @@ def run_interactively(data_file_prefix: str) -> None:
     map_element = mg.visualization.MapModule(agent_draw, map_height=600, map_width=600)
 
     server = mesa.visualization.ModularServer(
-        EvacuationModel, [map_element, clock_element], "Evacuation Model", model_params
+        EvacuationModel,
+        [map_element, clock_element, number_evacuated_element],
+        "Evacuation Model",
+        model_params,
     )
 
     server.launch()
