@@ -107,6 +107,10 @@ class EvacuationModel(mesa.Model):
                 "in_car": lambda x: x.in_car if hasattr(x, "in_car") else None,
                 "status": lambda x: x.status if hasattr(x, "status") else None,
                 "diverted": lambda x: x.diverted if hasattr(x, "diverted") else None,
+                "requires_evacuation": lambda x: (
+                    x.requires_evacuation if hasattr(x, "requires_evacuation") else None
+                ),
+                "evacuated": lambda x: x.evacuated if hasattr(x, "evacuated") else None,
             },
         )
         self.bomb_location = bomb_location

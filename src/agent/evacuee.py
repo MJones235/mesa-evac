@@ -170,6 +170,15 @@ class Evacuee(mg.GeoAgent):
             )
         ):
             self._divert()
+        if (
+            self.model.evacuating
+            and self.requires_evacuation
+            and not self.evacuated
+            and not self.model.space.evacuation_zone.geometry.contains(
+                Point(self.geometry.x, self.geometry.y)
+            )
+        ):
+            self.evacuated = True
 
     def _prepare_to_move(self) -> None:
         # if agent will begin evacuating this step
@@ -250,6 +259,7 @@ class Evacuee(mg.GeoAgent):
                     coords = self.model.roads.get_coords_from_idx(
                         self.route[self.route_index]
                     )
+                    # if agent has crossed into evacuation zone
                     if (
                         self.model.evacuating
                         and not self.requires_evacuation
