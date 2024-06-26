@@ -90,7 +90,7 @@ def run_and_generate_video(data_file_prefix: str, steps: int) -> None:
         agent_data_path=f"data/{data_file_prefix}/agent_data.csv",
         num_agents=2000,
         bomb_location=Point(424860, 564443),
-        evacuation_zone_radius=450,
+        evacuation_zone_radius=800,
         evacuation_start_h=8,
         evacuation_start_m=30,
         simulation_start_h=8,
