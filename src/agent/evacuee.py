@@ -6,6 +6,7 @@ import numpy as np
 from datetime import time, timedelta
 import pointpats
 import random
+import re
 
 from src.agent.building import Building
 
@@ -45,7 +46,10 @@ class Evacuee(mg.GeoAgent):
 
     in_car: bool
 
+    MPH_TO_KPH: float = 1.609
+
     walking_speed: float
+    speed_limit: float = 30 * MPH_TO_KPH
     min_pedestrian_separation = 1.0
     min_car_separation = 8.0
 
@@ -85,7 +89,7 @@ class Evacuee(mg.GeoAgent):
 
     @property
     def speed(self):
-        return 48 if self.in_car else self.walking_speed
+        return self.speed_limit if self.in_car else self.walking_speed
 
     @property
     def roads(self):
@@ -212,10 +216,7 @@ class Evacuee(mg.GeoAgent):
     def _move(self) -> None:
         # if the agent is currently travelling
         if self.route is not None and self.status != "parked":
-            # distance in metres travelled in timestep
-            distance_to_travel = (
-                self.speed / 60 / 60 * self.model.TIMESTEP.seconds * 1000
-            )
+            time_to_travel = self.model.TIMESTEP.seconds
 
             # agent is on the last leg of their journey
             if self.route_index == len(self.route) - 1 or len(self.route) < 2:
@@ -223,7 +224,7 @@ class Evacuee(mg.GeoAgent):
                 return
 
             # if agent passes through one or more nodes during the step
-            while distance_to_travel >= self._distance_to_next_node():
+            while time_to_travel >= self._time_to_next_node():
                 # agent is currently in safe area and reaches edge of evacuation zone
                 if (
                     self.model.evacuating
@@ -248,12 +249,12 @@ class Evacuee(mg.GeoAgent):
                     and agent.route[agent.route_index] == self.route[self.route_index]
                     and agent.distance_along_edge > self.distance_along_edge
                     and agent.distance_along_edge - self.distance_along_edge
-                    < distance_to_travel
+                    < self.speed / 60 / 60 * time_to_travel * 1000
                 ]
 
                 # if the path is clear
                 if len(agents_in_path) == 0:
-                    distance_to_travel -= self._distance_to_next_node()
+                    time_to_travel -= self._time_to_next_node()
                     self.route_index += 1
                     self.distance_along_edge = 0
                     coords = self.model.roads.get_coords_from_idx(
@@ -290,16 +291,20 @@ class Evacuee(mg.GeoAgent):
                     )[0]
 
                     # travel as far as possible, then queue up behind the nearest agent, leaving the minimum required separation
-                    distance_to_travel = (
-                        nearest_agent_distance
-                        - self.distance_along_edge
-                        - self.min_pedestrian_separation
+                    time_to_travel = (
+                        (60 * 60 / 1000)
+                        * (
+                            nearest_agent_distance
+                            - self.distance_along_edge
+                            - self.min_pedestrian_separation
+                        )
+                        / self.speed
                     )
-                    if distance_to_travel < 0:
-                        distance_to_travel = 0
+                    if time_to_travel < 0:
+                        time_to_travel = 0
                     break
 
-            self.distance_along_edge += distance_to_travel
+            self.distance_along_edge += (1000 / 60 / 60) * time_to_travel * self.speed
             self._update_location()
 
     def _divert(self) -> None:
@@ -360,6 +365,16 @@ class Evacuee(mg.GeoAgent):
         )[0]
         return edge["length"] - self.distance_along_edge
 
+    def _time_to_next_node(self) -> float:
+        origin_node = self.roads.nodes.iloc[self.route[self.route_index]]
+        destination_node = self.roads.nodes.iloc[self.route[self.route_index + 1]]
+        edge = self.roads.nx_graph.get_edge_data(
+            origin_node.name,
+            destination_node.name,
+        )[0]
+        self.speed_limit = self._get_speed_limit(edge)
+        return 60 * 60 / 1000 * (edge["length"] - self.distance_along_edge) / self.speed
+
     def _response_time(self, mean_evacuation_delay_m: int) -> timedelta:
         seconds = np.random.normal(mean_evacuation_delay_m * 60, 120)
         seconds = seconds if seconds > 0 else 0.0
@@ -400,3 +415,9 @@ class Evacuee(mg.GeoAgent):
                 self.current_schedule_node,
                 self.model.simulation_time.time(),
             ).time()
+
+    def _get_speed_limit(self, edge) -> float:
+        try:
+            return int(re.sub(r"\D", "", edge["maxspeed"])) * self.MPH_TO_KPH
+        except:
+            return 30 * self.MPH_TO_KPH
