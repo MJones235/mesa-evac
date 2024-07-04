@@ -16,14 +16,22 @@ def create_video(output_path: str) -> None:
 
     evacuee_df = agent_df[agent_df["type"] == "evacuee"]
 
-    f, ax = ox.plot_graph(graph, show=False, node_size=0, edge_linewidth=0.5)
+    f, ax = ox.plot_graph(
+        graph,
+        show=False,
+        node_size=0,
+        edge_linewidth=1,
+        bgcolor="#fff",
+        edge_color="#000",
+        edge_alpha=0.5,
+    )
 
     with writer.saving(f, output_path + ".mp4", f.dpi):
         evacuees_at_start = evacuee_df.loc[[0]]
         evacuees = ax.scatter(
             [point.x for point in evacuees_at_start.location],
             [point.y for point in evacuees_at_start.location],
-            s=2,
+            s=4,
         )
         evacuees.set_color(
             [
@@ -52,7 +60,7 @@ def create_video(output_path: str) -> None:
             evacuees.set_color(
                 [
                     (
-                        "Yellow"
+                        "Orange"
                         if evacuee.diverted
                         else (
                             "Green"

@@ -36,6 +36,9 @@ def plot_number_agents_against_evacuation_zone_size(batch_path: str) -> None:
         data["number_evacuated"].append(final_row.number_evacuated)
 
     df = pd.DataFrame.from_dict(data)
+
+    sns.set_theme(font_scale=1.2, style="whitegrid")
+
     g = sns.relplot(
         data=df.melt("evacuation_zone_radius", var_name="variable", value_name="count"),
         x="evacuation_zone_radius",
@@ -50,5 +53,6 @@ def plot_number_agents_against_evacuation_zone_size(batch_path: str) -> None:
         g.legend.texts, ["Requiring evacuation", "Evacuated after 10 mins"]
     ):
         t.set_text(l)
-    sns.move_legend(g, "upper right", frameon=True)
+    sns.move_legend(g, "upper center", frameon=True)
+    g.figure.tight_layout()
     plt.savefig(batch_path + "/agents_against_evacuation_zone_radius.png")
