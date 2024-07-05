@@ -140,7 +140,7 @@ class Evacuee(mg.GeoAgent):
         return position
 
     # identify agents that need to be evacuated
-    # agents outside the evacuatioin zone will not be able to enter the evacuation zone from this pointdd
+    # agents outside the evacuation zone will not be able to enter the evacuation zone from this point
     def evacuate(self) -> None:
         if self.model.space.evacuation_zone.geometry.contains(self.geometry):
             self.requires_evacuation = True
@@ -188,6 +188,7 @@ class Evacuee(mg.GeoAgent):
             x = k * destination_node.geometry.x + (1 - k) * origin_node.geometry.x
             y = k * destination_node.geometry.y + (1 - k) * origin_node.geometry.y
             self.model.space.move_evacuee(self, (x, y))
+        
         if (
             self.model.evacuating
             and not self.requires_evacuation
@@ -196,6 +197,7 @@ class Evacuee(mg.GeoAgent):
             )
         ):
             self._divert()
+        
         if (
             self.model.evacuating
             and self.requires_evacuation
@@ -249,20 +251,6 @@ class Evacuee(mg.GeoAgent):
 
             # if agent passes through one or more nodes during the step
             while time_to_travel >= self._time_to_next_node():
-                # agent is currently in safe area and reaches edge of evacuation zone
-                if (
-                    self.model.evacuating
-                    and self.all_roads.nodes.iloc[self.route[self.route_index]].name
-                    in self.safe_roads.nodes.index.to_list()
-                    and self.all_roads.nodes.iloc[self.route[self.route_index + 1]].name
-                    not in self.safe_roads.nodes.index.to_list()
-                ):
-                    self._divert()
-                    if self.route is None or len(self.route) < 2:
-                        self.status = "parked"
-                        self.leave_time = self.model.simulation_time.time()
-                        return
-
                 # assume agents cannot overtake.  get agents blocking this agent's path
                 agents_in_path = [
                     agent

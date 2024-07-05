@@ -18,6 +18,7 @@ from src.agent.building import (
 )
 from src.agent.evacuation_zone import EvacuationZone, EvacuationZoneExit
 from src.agent.evacuee import Evacuee
+from src.agent.traffic_sensor import TrafficSensor
 
 if TYPE_CHECKING:
     from src.model.model import EvacuationModel
@@ -37,6 +38,8 @@ class City(mg.GeoSpace):
     supermarkets = Tuple[Building]
     schools = Tuple[Building]
     home_counter: DefaultDict[mesa.space.FloatCoordinate, int]
+    traffic_sensors: list[TrafficSensor]
+
     _buildings: Dict[int, Building]
     _evacuee_pos_map: DefaultDict[mesa.space.FloatCoordinate, Set[Evacuee]]
     _evacuee_id_map: Dict[int, Evacuee]
@@ -64,6 +67,7 @@ class City(mg.GeoSpace):
         self._buildings = {}
         self._evacuee_pos_map = defaultdict(set)
         self._evacuee_id_map = {}
+        self.traffic_sensors = []
 
     def get_random_home(self) -> Building:
         return random.choice(self.homes)
@@ -188,3 +192,7 @@ class City(mg.GeoSpace):
         super().remove_agent(evacuee)
         del self._evacuee_id_map[evacuee.unique_id]
         self._evacuee_pos_map[(evacuee.geometry.x, evacuee.geometry.y)].remove(evacuee)
+
+    def add_traffic_sensors(self, agents: list[TrafficSensor]) -> None:
+        super().add_agents(agents)
+        self.traffic_sensors = agents

@@ -20,11 +20,10 @@ from src.agent.building import (
 )
 from src.agent.evacuee import Evacuee
 from src.agent.evacuation_zone import EvacuationZone, EvacuationZoneExit
-from src.agent.road import Road
+from src.agent.traffic_sensor import TrafficSensor
 from src.space.city import City
 from src.space.road_network import RoadNetwork
 import pandas as pd
-import numpy as np
 
 
 def get_time_elapsed(model) -> timedelta:
@@ -53,6 +52,8 @@ class EvacuationModel(mesa.Model):
     evacuating: bool
     agent_data: pd.DataFrame
 
+    sensor_locations: list[str]
+
     TIMESTEP = timedelta(seconds=10)
 
     def __init__(
@@ -71,6 +72,7 @@ class EvacuationModel(mesa.Model):
         mean_evacuation_delay_m: int = 300,
         car_use_pc: int = 50,
         evacuate_on_foot: bool = True,
+        sensor_locations: list[Point] = [],
     ) -> None:
         super().__init__()
         self.city = city
@@ -119,6 +121,7 @@ class EvacuationModel(mesa.Model):
         self.evacuating = False
         self.evacuation_duration = 0
         self.output_path = output_path
+        self._set_sensor_locations(sensor_locations)
         self.datacollector.collect(self)
 
     def run(self, steps: int = None):
@@ -286,6 +289,15 @@ class EvacuationModel(mesa.Model):
 
         for agent in self.space.evacuees:
             agent.evacuate()
+
+    def _set_sensor_locations(self, sensor_locations: list[Point]) -> None:
+        gdf = gpd.GeoDataFrame(
+            [{"geometry": location for location in sensor_locations}], crs="EPSG:27700"
+        )
+        sensors = mg.AgentCreator(
+            TrafficSensor, model=self, crs="EPSG:27700"
+        ).from_GeoDataFrame(gdf)
+        self.space.add_traffic_sensors(sensors)
 
     def _write_output_files(self):
         output_gml = self.output_path + ".gml"

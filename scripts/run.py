@@ -16,6 +16,7 @@ def make_parser():
     parser.add_argument("--city", type=str, required=True)
     parser.add_argument("--interactive", action="store_true")
     parser.add_argument("--steps", type=int, default=100)
+    parser.add_argument("--agents", type=int, default=2000)
     return parser
 
 
@@ -63,6 +64,7 @@ def run_interactively(data_file_prefix: str) -> None:
             value=True,
             description="If false, agents will leave the evacuation zone by the same method they arrived.  If false, they will leave on foot, unless they are actively driving at the time of the evacuation.",
         ),
+        "sensor_locations": [Point(424856, 564987)],
     }
 
     map_element = mg.visualization.MapModule(agent_draw, map_height=600, map_width=600)
@@ -77,7 +79,7 @@ def run_interactively(data_file_prefix: str) -> None:
     server.launch()
 
 
-def run_and_generate_video(data_file_prefix: str, steps: int) -> None:
+def run_and_generate_video(data_file_prefix: str, steps: int, num_agents: int) -> None:
     current_time = datetime.fromtimestamp(time.time()).strftime("%Y%m%d%H%M%S")
     output_path = f"outputs/{data_file_prefix}/{current_time}"
 
@@ -88,7 +90,7 @@ def run_and_generate_video(data_file_prefix: str, steps: int) -> None:
         city=data_file_prefix,
         domain_path=f"data/{data_file_prefix}/domain.gpkg",
         agent_data_path=f"data/{data_file_prefix}/agent_data.csv",
-        num_agents=2000,
+        num_agents=num_agents,
         bomb_location=Point(424860, 564443),
         evacuation_zone_radius=800,
         evacuation_start_h=8,
@@ -118,4 +120,4 @@ if __name__ == "__main__":
     if args.interactive:
         run_interactively(data_file_prefix)
     else:
-        run_and_generate_video(data_file_prefix, args.steps)
+        run_and_generate_video(data_file_prefix, args.steps, args.agents)
