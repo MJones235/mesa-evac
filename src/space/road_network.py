@@ -18,11 +18,15 @@ class RoadNetwork:
     _edges: GeoDataFrame
     _i_graph: igraph.Graph
 
-    def __init__(self, domain: Polygon):
+    def __init__(self, domain: Polygon, pedestrian: bool = False):
         """
         domain (Polygon): domain area in EPSG:4326
         """
-        G = ox.graph_from_polygon(domain, simplify=False)
+        G = ox.graph_from_polygon(
+            domain,
+            simplify=False,
+            network_type="walk" if pedestrian else "drive_service",
+        )
         G = ox.project_graph(G, to_crs="EPSG:27700")
         G = G.to_undirected()
         self.nx_graph = G.subgraph(max(nx.connected_components(G), key=len))

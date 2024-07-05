@@ -26,8 +26,10 @@ if TYPE_CHECKING:
 class City(mg.GeoSpace):
     model: EvacuationModel
     evacuation_zone: EvacuationZone
-    exits: Tuple[EvacuationZoneExit]
-    exit_idx: list[int]
+    exits_walk: Tuple[EvacuationZoneExit]
+    exit_idx_walk: list[int]
+    exits_drive: Tuple[EvacuationZoneExit]
+    exit_idx_drive: list[int]
     homes: Tuple[Building]
     work_buildings: Tuple[Building]
     recreation_buildings: Tuple[Building]
@@ -50,7 +52,8 @@ class City(mg.GeoSpace):
     def __init__(self, crs: str, model: EvacuationModel) -> None:
         super().__init__(crs=crs)
         self.model = model
-        self.exits = ()
+        self.exits_walk = ()
+        self.exits_drive = ()
         self.homes = ()
         self.work_buildings = ()
         self.recreation_buildings = ()
@@ -145,11 +148,12 @@ class City(mg.GeoSpace):
         super().add_agents([agent])
         self.evacuation_zone = agent
 
-    def add_exits(self, agents) -> None:
+    def add_exits(self, agents, walk: bool = False) -> None:
         super().add_agents(agents)
-        exits = list(self.exits + tuple(agents))
+        exits = list((self.exits_walk if walk else self.exits_drive) + tuple(agents))
+        roads = self.model.roads_walk if walk else self.model.roads_drive
         exit_idx = [
-            self.model.roads.get_nearest_node_idx((exit.geometry.x, exit.geometry.y))
+            roads.get_nearest_node_idx((exit.geometry.x, exit.geometry.y))
             for exit in exits
         ]
 
@@ -159,8 +163,12 @@ class City(mg.GeoSpace):
             del exits[duplicate]
             del exit_idx[duplicate]
 
-        self.exits = tuple(exits)
-        self.exit_idx = exit_idx
+        if walk:
+            self.exits_walk = tuple(exits)
+            self.exit_idx_walk = exit_idx
+        else:
+            self.exits_drive = tuple(exits)
+            self.exit_idx_drive = exit_idx
 
     def update_home_counter(
         self,

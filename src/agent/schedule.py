@@ -78,10 +78,8 @@ class Schedule:
                 i = 0
                 t = leave_time
                 while t < target_time:
-                    distance_to_next_node = (
-                        self.agent.model.roads.distance_between_nodes(
-                            path[i], path[i + 1]
-                        )
+                    distance_to_next_node = self.agent.roads.distance_between_nodes(
+                        path[i], path[i + 1]
                     )
                     time_to_next_node = (
                         distance_to_next_node / 1000
@@ -90,7 +88,7 @@ class Schedule:
                     t += timedelta(hours=time_to_next_node)
                     i += 1
 
-                node = self.agent.model.roads.nodes.iloc[path[i - 1]]
+                node = self.agent.roads.nodes.iloc[path[i - 1]]
                 return (
                     current_node_name,
                     Point(node.x, node.y),
@@ -133,13 +131,11 @@ class Schedule:
     def get_path(self, current_node_name, next_node_name) -> tuple[list[int], float]:
         origin = self._point_from_node_name(current_node_name)
         destination = self._point_from_node_name(next_node_name)
-        origin_idx = self.agent.model.roads.get_nearest_node_idx((origin.x, origin.y))
-        destination_idx = self.agent.model.roads.get_nearest_node_idx(
+        origin_idx = self.agent.roads.get_nearest_node_idx((origin.x, origin.y))
+        destination_idx = self.agent.roads.get_nearest_node_idx(
             (destination.x, destination.y)
         )
-        return self.agent.model.roads.shortest_path_by_index(
-            origin_idx, destination_idx
-        )
+        return self.agent.roads.shortest_path_by_index(origin_idx, destination_idx)
 
     def get_leave_time(self, node_name: str, arrival_time: time) -> datetime:
         node = self.schedule.nodes[node_name]

@@ -1,7 +1,7 @@
 import mesa
 import mesa_geo as mg
 import geopandas as gpd
-from networkx import write_gml
+from networkx import write_gml, compose
 import osmnx as ox
 from shapely import Polygon, Point
 from geopandas import GeoDataFrame
@@ -24,6 +24,7 @@ from src.agent.road import Road
 from src.space.city import City
 from src.space.road_network import RoadNetwork
 import pandas as pd
+import numpy as np
 
 
 def get_time_elapsed(model) -> timedelta:
@@ -37,8 +38,10 @@ def get_is_evacuation_started(model) -> bool:
 class EvacuationModel(mesa.Model):
     schedule: mesa.time.RandomActivation
     space: City
-    roads: RoadNetwork
-    safe_roads: RoadNetwork
+    roads_walk: RoadNetwork
+    safe_roads_walk: RoadNetwork
+    roads_drive: RoadNetwork
+    safe_roads_drive: RoadNetwork
     domain: Polygon
     num_agents: int
 
@@ -65,7 +68,6 @@ class EvacuationModel(mesa.Model):
         simulation_start_h: int,
         simulation_start_m: int,
         output_path: str = None,
-        visualise_roads: bool = False,
         mean_evacuation_delay_m: int = 300,
         car_use_pc: int = 50,
         evacuate_on_foot: bool = True,
@@ -79,9 +81,8 @@ class EvacuationModel(mesa.Model):
         self._load_domain_from_file(domain_path)
         self._load_agent_data_from_file(agent_data_path)
         self._load_buildings()
-        self.roads = RoadNetwork(self.domain)
-        if visualise_roads:
-            self._load_roads()
+        self.roads_drive = RoadNetwork(self.domain, False)
+        self.roads_walk = RoadNetwork(self.domain, True)
         self._set_building_entrance()
 
         date_today = date.today()
@@ -222,14 +223,12 @@ class EvacuationModel(mesa.Model):
             *self.space.shops,
             *self.space.schools,
         ):
-            building.entrance_pos = self.roads.get_nearest_node_coords(
+            building.entrance_pos_walk = self.roads_walk.get_nearest_node_coords(
                 building.centroid
             )
-
-    def _load_roads(self) -> None:
-        road_creator = mg.AgentCreator(Road, model=self)
-        roads = road_creator.from_GeoDataFrame(self.roads.edges)
-        self.space.add_agents(roads)
+            building.entrance_pos_drive = self.roads_drive.get_nearest_node_coords(
+                building.centroid
+            )
 
     def _create_evacuees(
         self, mean_evacuation_delay_m: int, car_use_pc: int, evacuate_on_foot: bool
@@ -265,31 +264,38 @@ class EvacuationModel(mesa.Model):
             centre_point=centre_point,
             radius=radius,
         )
-        evacuation_zone.set_exits(self.roads.edges)
-        exits = mg.AgentCreator(
+        evacuation_zone.set_exits(self.roads_drive.edges, False)
+        evacuation_zone.set_exits(self.roads_walk.edges, True)
+
+        exits_walk = mg.AgentCreator(
             EvacuationZoneExit, model=self, crs="EPSG:27700"
-        ).from_GeoDataFrame(evacuation_zone.exits)
+        ).from_GeoDataFrame(evacuation_zone.exits_walk)
+        exits_drive = mg.AgentCreator(
+            EvacuationZoneExit, model=self, crs="EPSG:27700"
+        ).from_GeoDataFrame(evacuation_zone.exits_drive)
         self.space.add_evacuation_zone(evacuation_zone)
-        self.space.add_exits(exits)
+
+        self.space.add_exits(exits_walk, True)
+        self.space.add_exits(exits_drive, False)
+
         self.schedule.add(evacuation_zone)
-        self.safe_roads = RoadNetwork(self.domain)
-        self.safe_roads.remove_nodes_in_polygon(evacuation_zone.geometry)
+        self.safe_roads_walk = RoadNetwork(self.domain, True)
+        self.safe_roads_drive = RoadNetwork(self.domain, False)
+        self.safe_roads_walk.remove_nodes_in_polygon(evacuation_zone.geometry)
+        self.safe_roads_drive.remove_nodes_in_polygon(evacuation_zone.geometry)
 
         for agent in self.space.evacuees:
             agent.evacuate()
 
     def _write_output_files(self):
         output_gml = self.output_path + ".gml"
-        write_gml(self.roads.nx_graph, path=output_gml, stringizer=lambda x: str(x))
+        graph = compose(self.roads_walk.nx_graph, self.roads_drive.nx_graph)
+        write_gml(graph, path=output_gml, stringizer=lambda x: str(x))
 
         output_gpkg = self.output_path + ".gpkg"
 
         gpd.GeoDataFrame([{"geometry": self.space.evacuation_zone.geometry}]).to_file(
             output_gpkg, layer="evacuation_zone", driver="GPKG"
-        )
-        exits_list = [{"geometry": exit.geometry} for exit in self.space.exits]
-        gpd.GeoDataFrame(exits_list, crs="EPSG:27700").to_file(
-            output_gpkg, layer="exits", driver="GPKG"
         )
 
         building_list = [

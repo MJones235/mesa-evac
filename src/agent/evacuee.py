@@ -47,11 +47,11 @@ class Evacuee(mg.GeoAgent):
     in_car: bool
 
     MPH_TO_KPH: float = 1.609
+    PEDESTRIAN_SEPARATION = 1.0
+    CAR_SEPARATION = 5.0
 
     walking_speed: float
     speed_limit: float = 30 * MPH_TO_KPH
-    min_pedestrian_separation = 1.0
-    min_car_separation = 8.0
 
     requires_evacuation = False
     evacuated = False
@@ -93,7 +93,21 @@ class Evacuee(mg.GeoAgent):
 
     @property
     def roads(self):
-        return self.model.safe_roads if self.on_safe_roads else self.model.roads
+        return self.safe_roads if self.on_safe_roads else self.all_roads
+
+    @property
+    def safe_roads(self):
+        return (
+            self.model.safe_roads_drive if self.in_car else self.model.safe_roads_walk
+        )
+
+    @property
+    def all_roads(self):
+        return self.model.roads_drive if self.in_car else self.model.roads_walk
+
+    @property
+    def agent_separation(self):
+        return self.CAR_SEPARATION if self.in_car else self.PEDESTRIAN_SEPARATION
 
     def step(self) -> None:
         self._prepare_to_move()
@@ -139,17 +153,25 @@ class Evacuee(mg.GeoAgent):
         self.status = "evacuating"
 
         # current location index
-        source_idx = self.model.roads.get_nearest_node_idx(
-            (self.geometry.x, self.geometry.y)
-        )
+        source_idx = self.roads.get_nearest_node_idx((self.geometry.x, self.geometry.y))
 
         # calculate minimum distance to each evacuation point
         distances = self.roads.i_graph.distances(
-            source=[source_idx], target=self.model.space.exit_idx, weights="length"
+            source=[source_idx],
+            target=(
+                self.model.space.exit_idx_drive
+                if self.in_car
+                else self.model.space.exit_idx_walk
+            ),
+            weights="length",
         )[0]
 
         # chose nearest evacuation point
-        exit = self.model.space.exits[np.argmin(distances)]
+        exit = (
+            self.model.space.exits_drive[np.argmin(distances)]
+            if self.in_car
+            else self.model.space.exits_walk[np.argmin(distances)]
+        )
         self._path_select((exit.geometry.x, exit.geometry.y))
 
     def _update_location(self):
@@ -210,7 +232,9 @@ class Evacuee(mg.GeoAgent):
                 self.destination_building = self.schedule.building_from_node_name(
                     self.destination_schedule_node
                 )
-                self._path_select(self.destination_building.entrance_pos)
+                self._path_select(
+                    self.destination_building.entrance_pos(not self.in_car)
+                )
                 self.status = "travelling"
 
     def _move(self) -> None:
@@ -228,10 +252,10 @@ class Evacuee(mg.GeoAgent):
                 # agent is currently in safe area and reaches edge of evacuation zone
                 if (
                     self.model.evacuating
-                    and self.roads.nodes.iloc[self.route[self.route_index]].name
-                    in self.model.safe_roads.nodes.index.to_list()
-                    and self.roads.nodes.iloc[self.route[self.route_index + 1]].name
-                    not in self.model.safe_roads.nodes.index.to_list()
+                    and self.all_roads.nodes.iloc[self.route[self.route_index]].name
+                    in self.safe_roads.nodes.index.to_list()
+                    and self.all_roads.nodes.iloc[self.route[self.route_index + 1]].name
+                    not in self.safe_roads.nodes.index.to_list()
                 ):
                     self._divert()
                     if self.route is None or len(self.route) < 2:
@@ -257,7 +281,7 @@ class Evacuee(mg.GeoAgent):
                     time_to_travel -= self._time_to_next_node()
                     self.route_index += 1
                     self.distance_along_edge = 0
-                    coords = self.model.roads.get_coords_from_idx(
+                    coords = self.roads.get_coords_from_idx(
                         self.route[self.route_index]
                     )
                     # if agent has crossed into evacuation zone
@@ -296,7 +320,7 @@ class Evacuee(mg.GeoAgent):
                         * (
                             nearest_agent_distance
                             - self.distance_along_edge
-                            - self.min_pedestrian_separation
+                            - self.agent_separation
                         )
                         / self.speed
                     )
@@ -312,24 +336,24 @@ class Evacuee(mg.GeoAgent):
         self.on_safe_roads = True
         # try to reach destination via an alternative route
         try:
-            self._path_select(self.destination_building.entrance_pos)
+            self._path_select(self.destination_building.entrance_pos(not self.in_car))
         except:
             # else go home (if home is outside evacuation zone)
             try:
                 if not self.model.space.evacuation_zone.geometry.contains(
-                    Point(self.home.entrance_pos)
+                    Point(self.home.entrance_pos(not self.in_car))
                 ):
-                    self._path_select(self.home.entrance_pos)
+                    self._path_select(self.home.entrance_pos(not self.in_car))
                 else:
                     raise Exception("house inside evacuation zone")
             except:
                 # else go to someone else's home
                 house = self.model.space.get_random_home()
                 while self.model.space.evacuation_zone.geometry.contains(
-                    Point(house.entrance_pos)
+                    Point(house.entrance_pos(not self.in_car))
                 ):
                     house = self.model.space.get_random_home()
-                self._path_select(house.entrance_pos)
+                self._path_select(house.entrance_pos(not self.in_car))
         finally:
             self.status = "travelling"
 
@@ -390,7 +414,7 @@ class Evacuee(mg.GeoAgent):
 
     def _recalculate_route(self) -> None:
         if self.destination_building is not None:
-            self._path_select(self.destination_building.entrance_pos)
+            self._path_select(self.destination_building.entrance_pos(not self.in_car))
 
     def _arrive_at_destination(self) -> None:
         # if the agent has just left the evacuation zone, stop and decide where to go next

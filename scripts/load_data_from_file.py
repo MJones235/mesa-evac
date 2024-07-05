@@ -13,7 +13,6 @@ def load_data_from_file(output_path: str) -> None:
     nodes, _ = ox.convert.graph_to_gdfs(graph)
     gpkg = output_path + ".gpkg"
     evacuation_zone = gpd.read_file(gpkg, layer="evacuation_zone")
-    exits = gpd.read_file(gpkg, layer="exits")
     buildings = gpd.read_file(gpkg, layer="buildings")
 
-    return agent_df, model_df, graph, nodes, evacuation_zone, exits, buildings
+    return agent_df, model_df, graph, nodes, evacuation_zone, buildings

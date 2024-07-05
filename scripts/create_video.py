@@ -6,7 +6,7 @@ from scripts.load_data_from_file import load_data_from_file
 
 
 def create_video(output_path: str) -> None:
-    (agent_df, model_df, graph, nodes, evacuation_zone, exits, _) = load_data_from_file(
+    (agent_df, model_df, graph, _, evacuation_zone, _) = load_data_from_file(
         output_path
     )
 
