@@ -24,6 +24,7 @@ from src.agent.traffic_sensor import TrafficSensor
 from src.space.city import City
 from src.space.road_network import RoadNetwork
 import pandas as pd
+import csv
 
 
 def get_time_elapsed(model) -> timedelta:
@@ -317,6 +318,13 @@ class EvacuationModel(mesa.Model):
         gpd.GeoDataFrame(building_list, crs="EPSG:27700").to_file(
             output_gpkg, layer="buildings", driver="GPKG"
         )
+
+        with open(self.output_path + ".traffic-sensors.csv", "w") as csvfile:
+            writer = csv.writer(csvfile)
+            writer.writerow(["osmid", "time", "type"])
+            for sensor in self.space.traffic_sensors:
+                for record in sensor.records:
+                    writer.writerow([sensor.osmid, record.time, record.type])
 
 
 def number_evacuated(model: EvacuationModel):

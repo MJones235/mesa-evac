@@ -52,6 +52,10 @@ class City(mg.GeoSpace):
     def buildings(self) -> list[Building]:
         return list(self._buildings.values())
 
+    @property
+    def traffic_sensor_osmids(self) -> list[str]:
+        return list(map(lambda x: x.osmid, self.traffic_sensors))
+
     def __init__(self, crs: str, model: EvacuationModel) -> None:
         super().__init__(crs=crs)
         self.model = model
@@ -196,3 +200,7 @@ class City(mg.GeoSpace):
     def add_traffic_sensors(self, agents: list[TrafficSensor]) -> None:
         super().add_agents(agents)
         self.traffic_sensors = agents
+
+    def increment_traffic_sensor(self, osmid: str, pedestrian: bool) -> None:
+        sensor = list(filter(lambda x: x.osmid == osmid, self.traffic_sensors))[0]
+        sensor.add_record(pedestrian)

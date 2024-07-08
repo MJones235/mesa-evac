@@ -15,7 +15,7 @@ class TrafficRecord:
 class TrafficSensor(mg.GeoAgent):
     type = "traffic_sensor"
     osmid: str
-    records: list[TrafficRecord]
+    records: list[TrafficRecord] = []
 
     def __init__(self, unique_id, model, geometry, crs):
         super().__init__(unique_id, model, geometry, crs)

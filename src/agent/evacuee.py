@@ -58,6 +58,8 @@ class Evacuee(mg.GeoAgent):
     on_safe_roads = False
     diverted = False
 
+    previous_osmid = None
+
     def __init__(
         self,
         unique_id,
@@ -188,7 +190,7 @@ class Evacuee(mg.GeoAgent):
             x = k * destination_node.geometry.x + (1 - k) * origin_node.geometry.x
             y = k * destination_node.geometry.y + (1 - k) * origin_node.geometry.y
             self.model.space.move_evacuee(self, (x, y))
-        
+
         if (
             self.model.evacuating
             and not self.requires_evacuation
@@ -197,7 +199,7 @@ class Evacuee(mg.GeoAgent):
             )
         ):
             self._divert()
-        
+
         if (
             self.model.evacuating
             and self.requires_evacuation
@@ -249,6 +251,9 @@ class Evacuee(mg.GeoAgent):
                 self._arrive_at_destination()
                 return
 
+            if self.route_index == 0 and self.distance_along_edge == 0:
+                self._report_to_traffic_sensors("route index 0")
+
             # if agent passes through one or more nodes during the step
             while time_to_travel >= self._time_to_next_node():
                 # assume agents cannot overtake.  get agents blocking this agent's path
@@ -290,6 +295,8 @@ class Evacuee(mg.GeoAgent):
                             self,
                             coords,
                         )
+
+                    self._report_to_traffic_sensors("just incremented")
 
                     # if target is reached
                     if self.route_index == len(self.route) - 1:
@@ -369,21 +376,11 @@ class Evacuee(mg.GeoAgent):
             )
 
     def _distance_to_next_node(self) -> float:
-        origin_node = self.roads.nodes.iloc[self.route[self.route_index]]
-        destination_node = self.roads.nodes.iloc[self.route[self.route_index + 1]]
-        edge = self.roads.nx_graph.get_edge_data(
-            origin_node.name,
-            destination_node.name,
-        )[0]
+        edge = self._get_edge()
         return edge["length"] - self.distance_along_edge
 
     def _time_to_next_node(self) -> float:
-        origin_node = self.roads.nodes.iloc[self.route[self.route_index]]
-        destination_node = self.roads.nodes.iloc[self.route[self.route_index + 1]]
-        edge = self.roads.nx_graph.get_edge_data(
-            origin_node.name,
-            destination_node.name,
-        )[0]
+        edge = self._get_edge()
         self.speed_limit = self._get_speed_limit(edge)
         return 60 * 60 / 1000 * (edge["length"] - self.distance_along_edge) / self.speed
 
@@ -433,3 +430,22 @@ class Evacuee(mg.GeoAgent):
             return int(re.sub(r"\D", "", edge["maxspeed"])) * self.MPH_TO_KPH
         except:
             return 30 * self.MPH_TO_KPH
+
+    def _get_edge(self):
+        origin_node = self.roads.nodes.iloc[self.route[self.route_index]]
+        destination_node = self.roads.nodes.iloc[self.route[self.route_index + 1]]
+        return self.roads.nx_graph.get_edge_data(
+            origin_node.name,
+            destination_node.name,
+        )[0]
+
+    def _report_to_traffic_sensors(self, code_pos) -> None:
+        if len(self.route) > 2 and self.route_index < len(self.route) - 1:
+            edge = self._get_edge()
+            osmid = edge["osmid"]
+            if (
+                osmid != self.previous_osmid
+                and osmid in self.model.space.traffic_sensor_osmids
+            ):
+                self.model.space.increment_traffic_sensor(osmid, self.in_car)
+                self.previous_osmid = osmid

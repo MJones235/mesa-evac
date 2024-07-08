@@ -101,6 +101,7 @@ def run_and_generate_video(data_file_prefix: str, steps: int, num_agents: int) -
         mean_evacuation_delay_m=5,
         car_use_pc=50,
         evacuate_on_foot=True,
+        sensor_locations=[Point(424856, 564987)],
     ).run(steps)
 
     create_video(output_path + f"/{current_time}")
