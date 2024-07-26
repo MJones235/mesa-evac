@@ -86,7 +86,12 @@ class Evacuee(mg.GeoAgent):
         super().__init__(unique_id, model, geometry, crs)
 
         self.distance_along_edge = 0
-        self.evacuation_delay = self._response_time(mean_evacuation_delay_m)
+
+        if mean_evacuation_delay_m is None:
+            self.evacuation_delay = timedelta(seconds=0)
+        else:
+            self.evacuation_delay = self._response_time(mean_evacuation_delay_m)
+
         self.evacuate_on_foot = evacuate_on_foot
 
     @property

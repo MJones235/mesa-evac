@@ -25,6 +25,7 @@ from src.space.city import City
 from src.space.road_network import RoadNetwork
 import pandas as pd
 import csv
+from enum import Enum
 
 
 def get_time_elapsed(model) -> timedelta:
@@ -122,7 +123,8 @@ class EvacuationModel(mesa.Model):
         self.evacuating = False
         self.evacuation_duration = 0
         self.output_path = output_path
-        self._set_sensor_locations(sensor_locations)
+        if sensor_locations is not None and len(sensor_locations) > 0:
+            self._set_sensor_locations(sensor_locations)
         self.datacollector.collect(self)
 
     def run(self, steps: int = None):
@@ -333,3 +335,10 @@ def number_evacuated(model: EvacuationModel):
 
 def number_to_evacuate(model: EvacuationModel):
     return len([agent for agent in model.space.evacuees if agent.requires_evacuation])
+
+
+class Behaviour(Enum):
+    COMPLIANT = 1
+    NON_COMPLIANT = 2
+    CURIOUS = 3
+    PANICKED = 4

@@ -221,6 +221,13 @@ class ChildSchedule(Schedule):
             },
         ),
         (
+            "school 2",
+            {
+                "leave_at": time(hour=17),
+                "variation": timedelta(minutes=30),
+            },
+        ),
+        (
             "supermarket",
             {"duration": timedelta(minutes=45), "variation": timedelta(minutes=15)},
         ),
@@ -234,8 +241,10 @@ class ChildSchedule(Schedule):
     _edges = [
         ("home", "school", {"p": 1}),
         ("school", "home 2", {"p": 0.5}),
-        ("school", "supermarket", {"p": 0.25}),
-        ("school", "recreation", {"p": 0.25}),
+        ("school", "school 2", {"p": 0.5}),
+        ("school 2", "supermarket", {"p": 0.25}),
+        ("school 2", "recreation", {"p": 0.25}),
+        ("school 2", "home 2", {"p": 0.5}),
         ("supermarket", "home 2", {"p": 1}),
         ("recreation", "home 2", {"p": 1}),
     ]
@@ -246,7 +255,10 @@ class ChildSchedule(Schedule):
 
 class WorkingAdultSchedule(Schedule):
     _nodes = [
-        ("home", {"leave_at": time(hour=8), "variation": timedelta(minutes=15)}),
+        (
+            "home",
+            {"leave_at": time(hour=7, minute=30), "variation": timedelta(hours=1)},
+        ),
         (
             "school",
             {"duration": timedelta(minutes=10), "variation": timedelta(minutes=5)},
@@ -255,40 +267,61 @@ class WorkingAdultSchedule(Schedule):
         (
             "work",
             {
-                "leave_at": time(hour=17, minute=15),
-                "variation": timedelta(minutes=15),
+                "leave_at": time(hour=13),
+                "variation": timedelta(minutes=90),
             },
+        ),
+        (
+            "work 2",
+            {
+                "leave_at": time(hour=17),
+                "variation": timedelta(minutes=30),
+            },
+        ),
+        (
+            "supermarket",
+            {"duration": timedelta(minutes=10), "variation": timedelta(minutes=5)},
+        ),
+        (
+            "recreation",
+            {"duration": timedelta(minutes=10), "variation": timedelta(minutes=5)},
         ),
         (
             "school 2",
             {"duration": timedelta(minutes=5), "variation": timedelta(minutes=1)},
         ),
         (
-            "supermarket",
+            "supermarket 2",
             {"duration": timedelta(minutes=45), "variation": timedelta(minutes=15)},
         ),
         ("home 2", {"leave_at": time(hour=19), "variation": timedelta(hours=1)}),
         (
-            "recreation",
+            "recreation 2",
             {"duration": timedelta(hours=1), "variation": timedelta(minutes=30)},
         ),
         ("home 3", {"leave_at": time(hour=23), "variation": timedelta(hours=1)}),
     ]
 
     _edges = [
-        ("home", "school", {"p": 1}),
+        ("home", "school", {"p": 0.2}),
+        ("home", "work", {"p": 0.8}),
         ("school", "shop", {"p": 0.1}),
         ("school", "work", {"p": 0.9}),
         ("shop", "work", {"p": 1}),
-        ("work", "supermarket", {"p": 0.15}),
-        ("work", "school 2", {"p": 0.6}),
-        ("work", "home 2", {"p": 0.25}),
-        ("supermarket", "home 2", {"p": 1}),
-        ("school 2", "supermarket", {"p": 0.5}),
+        ("work", "supermarket", {"p": 0.25}),
+        ("supermarket", "work 2", {"p": 1}),
+        ("work", "recreation", {"p": 0.25}),
+        ("recreation", "work 2", {"p": 1}),
+        ("work", "work 2", {"p": 0.5}),
+        ("work 2", "supermarket 2", {"p": 0.2}),
+        ("work 2", "school 2", {"p": 0.2}),
+        ("work 2", "home 2", {"p": 0.6}),
+        ("supermarket 2", "home 2", {"p": 1}),
+        ("school 2", "supermarket 2", {"p": 0.5}),
         ("school 2", "home 2", {"p": 0.5}),
-        ("home 2", "recreation", {"p": 0.1}),
+        ("home 2", "recreation 2", {"p": 0.1}),
         ("home 2", "home 3", {"p": 0.9}),
-        ("recreation", "home 3", {"p": 1}),
+        ("recreation 2", "home 3", {"p": 1}),
     ]
 
     def __init__(self, agent: Evacuee) -> None:
@@ -309,19 +342,33 @@ class RetiredAdultSchedule(Schedule):
         ),
         (
             "home 2",
-            {"duration": timedelta(hours=2), "variation": timedelta(hours=1)},
+            {"leave_at": time(hour=14), "variation": timedelta(hours=1)},
+        ),
+        ("shop 2", {"duration": timedelta(hours=2), "variation": timedelta(hours=1)}),
+        (
+            "supermarket 2",
+            {"duration": timedelta(minutes=45), "variation": timedelta(minutes=15)},
+        ),
+        (
+            "recreation 2",
+            {"duration": timedelta(hours=1), "variation": timedelta(minutes=30)},
         ),
         ("home 3", {"leave_at": time(hour=19), "variation": timedelta(hours=1)}),
     ]
 
     _edges = [
-        ("home", "supermarket", {"p": 0.7}),
-        ("home", "shop", {"p": 0.3}),
+        ("home", "supermarket", {"p": 0.4}),
+        ("home", "shop", {"p": 0.2}),
+        ("home", "recreation", {"p": 0.4}),
         ("supermarket", "home 2", {"p": 1}),
         ("shop", "home 2", {"p": 1}),
-        ("home 2", "recreation", {"p": 0.8}),
-        ("home 2", "home 3", {"p": 0.2}),
-        ("recreation", "home 3", {"p": 1}),
+        ("recreation", "home 2", {"p": 1}),
+        ("home 2", "supermarket 2", {"p": 0.4}),
+        ("home 2", "shop 2", {"p": 0.2}),
+        ("home 2", "recreation 2", {"p": 0.4}),
+        ("supermarket 2", "home 3", {"p": 1}),
+        ("shop 2", "home 3", {"p": 1}),
+        ("recreation 2", "home 3", {"p": 1}),
     ]
 
     def __init__(self, agent: Evacuee) -> None:

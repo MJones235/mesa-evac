@@ -6,6 +6,7 @@ from datetime import datetime
 import time
 import os
 
+from scripts.create_figures import plot_traffic_sensor_data
 from scripts.create_video import create_video
 from src.model.model import EvacuationModel
 from src.visualisation.server import agent_draw, clock_element, number_evacuated_element
@@ -17,6 +18,7 @@ def make_parser():
     parser.add_argument("--interactive", action="store_true")
     parser.add_argument("--steps", type=int, default=100)
     parser.add_argument("--agents", type=int, default=2000)
+    parser.add_argument("--novideo", action="store_true")
     return parser
 
 
@@ -79,7 +81,9 @@ def run_interactively(data_file_prefix: str) -> None:
     server.launch()
 
 
-def run_and_generate_video(data_file_prefix: str, steps: int, num_agents: int) -> None:
+def run_and_generate_video(
+    data_file_prefix: str, steps: int, num_agents: int, no_video: bool
+) -> None:
     current_time = datetime.fromtimestamp(time.time()).strftime("%Y%m%d%H%M%S")
     output_path = f"outputs/{data_file_prefix}/{current_time}"
 
@@ -93,10 +97,10 @@ def run_and_generate_video(data_file_prefix: str, steps: int, num_agents: int) -
         num_agents=num_agents,
         bomb_location=Point(424860, 564443),
         evacuation_zone_radius=800,
-        evacuation_start_h=8,
-        evacuation_start_m=30,
-        simulation_start_h=8,
-        simulation_start_m=29,
+        evacuation_start_h=23,
+        evacuation_start_m=59,
+        simulation_start_h=0,
+        simulation_start_m=0,
         output_path=output_path + f"/{current_time}",
         mean_evacuation_delay_m=5,
         car_use_pc=50,
@@ -104,7 +108,10 @@ def run_and_generate_video(data_file_prefix: str, steps: int, num_agents: int) -
         sensor_locations=[Point(424856, 564987)],
     ).run(steps)
 
-    create_video(output_path + f"/{current_time}")
+    if not no_video:
+        create_video(output_path + f"/{current_time}")
+
+    plot_traffic_sensor_data(output_path + f"/{current_time}")
 
 
 if __name__ == "__main__":
@@ -121,4 +128,4 @@ if __name__ == "__main__":
     if args.interactive:
         run_interactively(data_file_prefix)
     else:
-        run_and_generate_video(data_file_prefix, args.steps, args.agents)
+        run_and_generate_video(data_file_prefix, args.steps, args.agents, args.novideo)
