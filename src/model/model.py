@@ -18,14 +18,13 @@ from src.agent.building import (
     Supermarket,
     WorkPlace,
 )
-from src.agent.evacuee import Evacuee
+from src.agent.evacuee import Behaviour, Evacuee
 from src.agent.evacuation_zone import EvacuationZone, EvacuationZoneExit
 from src.agent.traffic_sensor import TrafficSensor
 from src.space.city import City
 from src.space.road_network import RoadNetwork
 import pandas as pd
 import csv
-from enum import Enum
 
 
 def get_time_elapsed(model) -> timedelta:
@@ -53,6 +52,7 @@ class EvacuationModel(mesa.Model):
 
     evacuating: bool
     agent_data: pd.DataFrame
+    agent_behaviour: dict[Behaviour, float] | None
 
     sensor_locations: list[str]
 
@@ -75,12 +75,14 @@ class EvacuationModel(mesa.Model):
         car_use_pc: int = 50,
         evacuate_on_foot: bool = True,
         sensor_locations: list[Point] = [],
+        agent_behaviour: dict[Behaviour, float] | None = None,
     ) -> None:
         super().__init__()
         self.city = city
         self.schedule = mesa.time.RandomActivation(self)
         self.space = City(crs="EPSG:27700", model=self)
         self.num_agents = num_agents
+        self.agent_behaviour = agent_behaviour
         self.output_path = output_path
         self._load_domain_from_file(domain_path)
         self._load_agent_data_from_file(agent_data_path)
@@ -257,6 +259,10 @@ class EvacuationModel(mesa.Model):
                 mean_evacuation_delay_m=mean_evacuation_delay_m,
                 car_use_pc=car_use_pc,
                 evacuate_on_foot=evacuate_on_foot,
+                behaviour=random.choices(
+                    list(self.agent_behaviour.keys()),
+                    list(self.agent_behaviour.values()),
+                )[0],
             )
 
             self.space.add_evacuee(evacuee)
@@ -335,10 +341,3 @@ def number_evacuated(model: EvacuationModel):
 
 def number_to_evacuate(model: EvacuationModel):
     return len([agent for agent in model.space.evacuees if agent.requires_evacuation])
-
-
-class Behaviour(Enum):
-    COMPLIANT = 1
-    NON_COMPLIANT = 2
-    CURIOUS = 3
-    PANICKED = 4

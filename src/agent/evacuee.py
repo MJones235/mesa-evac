@@ -1,3 +1,4 @@
+from enum import Enum
 import mesa
 import mesa_geo as mg
 from shapely import Point, buffer, Polygon
@@ -16,6 +17,13 @@ from src.agent.schedule import (
     RetiredAdultSchedule,
     WorkingAdultSchedule,
 )
+
+
+class Behaviour(Enum):
+    COMPLIANT = 1
+    NON_COMPLIANT = 2
+    CURIOUS = 3
+    PANICKED = 4
 
 
 class Evacuee(mg.GeoAgent):
@@ -59,6 +67,7 @@ class Evacuee(mg.GeoAgent):
     diverted = False
 
     previous_osmid = None
+    behaviour: Behaviour | None = None
 
     def __init__(
         self,
@@ -72,6 +81,7 @@ class Evacuee(mg.GeoAgent):
         mean_evacuation_delay_m,
         car_use_pc,
         evacuate_on_foot,
+        behaviour,
     ) -> None:
         self.model = model
         self.home = home
@@ -80,6 +90,7 @@ class Evacuee(mg.GeoAgent):
         self.category = category
         self.walking_speed = self.model.agent_data.iloc[category].walking_speed
         self.in_car = random.choices([True, False], [car_use_pc, 100 - car_use_pc])[0]
+        self.behaviour = behaviour
         self._set_schedule()
         geometry = self._initialise_position()
 
@@ -199,6 +210,7 @@ class Evacuee(mg.GeoAgent):
         if (
             self.model.evacuating
             and not self.requires_evacuation
+            and not self.behaviour is Behaviour.NON_COMPLIANT
             and self.model.space.evacuation_zone.geometry.contains(
                 Point(self.geometry.x, self.geometry.y)
             )
@@ -222,6 +234,7 @@ class Evacuee(mg.GeoAgent):
             and self.status != "evacuating"  # agent has not already begun to evacuate
             and self.model.simulation_time - self.model.evacuation_start_time
             >= self.evacuation_delay  # agent's assigned evacuation delay has elapsed (to account for time taken to communicate evacuation and exit building)
+            and not self.behaviour is Behaviour.NON_COMPLIANT
             and self.model.space.evacuation_zone.geometry.contains(
                 self.geometry
             )  # agent is currently in evacuation zone
@@ -286,6 +299,7 @@ class Evacuee(mg.GeoAgent):
                     if (
                         self.model.evacuating
                         and not self.requires_evacuation
+                        and not self.behaviour is Behaviour.NON_COMPLIANT
                         and self.model.space.evacuation_zone.geometry.contains(
                             Point(coords)
                         )

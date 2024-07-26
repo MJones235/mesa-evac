@@ -8,6 +8,7 @@ import os
 
 from scripts.create_figures import plot_traffic_sensor_data
 from scripts.create_video import create_video
+from src.agent.evacuee import Behaviour
 from src.model.model import EvacuationModel
 from src.visualisation.server import agent_draw, clock_element, number_evacuated_element
 
@@ -67,6 +68,12 @@ def run_interactively(data_file_prefix: str) -> None:
             description="If false, agents will leave the evacuation zone by the same method they arrived.  If false, they will leave on foot, unless they are actively driving at the time of the evacuation.",
         ),
         "sensor_locations": [Point(424856, 564987)],
+        "agent_behaviour": {
+            Behaviour.NON_COMPLIANT: 0.5,
+            Behaviour.COMPLIANT: 0.5,
+            Behaviour.CURIOUS: 0,
+            Behaviour.PANICKED: 0,
+        },
     }
 
     map_element = mg.visualization.MapModule(agent_draw, map_height=600, map_width=600)
@@ -97,15 +104,21 @@ def run_and_generate_video(
         num_agents=num_agents,
         bomb_location=Point(424860, 564443),
         evacuation_zone_radius=800,
-        evacuation_start_h=23,
-        evacuation_start_m=59,
-        simulation_start_h=0,
-        simulation_start_m=0,
+        evacuation_start_h=8,
+        evacuation_start_m=29,
+        simulation_start_h=8,
+        simulation_start_m=30,
         output_path=output_path + f"/{current_time}",
         mean_evacuation_delay_m=5,
         car_use_pc=50,
         evacuate_on_foot=True,
         sensor_locations=[Point(424856, 564987)],
+        agent_behaviour={
+            Behaviour.NON_COMPLIANT: 0.5,
+            Behaviour.COMPLIANT: 0.5,
+            Behaviour.CURIOUS: 0,
+            Behaviour.PANICKED: 0,
+        },
     ).run(steps)
 
     if not no_video:
