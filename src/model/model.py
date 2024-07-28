@@ -50,7 +50,7 @@ class EvacuationModel(mesa.Model):
     evacuation_start_time = datetime
     evacuation_duration: timedelta
 
-    evacuating: bool
+    evacuating: bool = False
     agent_data: pd.DataFrame
     agent_behaviour: dict[Behaviour, float] | None
 

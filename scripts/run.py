@@ -72,7 +72,7 @@ def run_interactively(data_file_prefix: str) -> None:
             Behaviour.NON_COMPLIANT: 0.5,
             Behaviour.COMPLIANT: 0.5,
             Behaviour.CURIOUS: 0,
-            Behaviour.PANICKED: 0,
+            Behaviour.FAMILIAR: 0,
         },
     }
 
@@ -105,19 +105,19 @@ def run_and_generate_video(
         bomb_location=Point(424860, 564443),
         evacuation_zone_radius=800,
         evacuation_start_h=8,
-        evacuation_start_m=29,
+        evacuation_start_m=30,
         simulation_start_h=8,
-        simulation_start_m=30,
+        simulation_start_m=29,
         output_path=output_path + f"/{current_time}",
         mean_evacuation_delay_m=5,
         car_use_pc=50,
         evacuate_on_foot=True,
         sensor_locations=[Point(424856, 564987)],
         agent_behaviour={
-            Behaviour.NON_COMPLIANT: 0.5,
-            Behaviour.COMPLIANT: 0.5,
+            Behaviour.NON_COMPLIANT: 0,
+            Behaviour.COMPLIANT: 0,
             Behaviour.CURIOUS: 0,
-            Behaviour.PANICKED: 0,
+            Behaviour.FAMILIAR: 1,
         },
     ).run(steps)
 

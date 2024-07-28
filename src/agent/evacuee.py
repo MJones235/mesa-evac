@@ -8,6 +8,7 @@ from datetime import time, timedelta
 import pointpats
 import random
 import re
+import pointpats
 
 from src.agent.building import Building
 
@@ -23,7 +24,7 @@ class Behaviour(Enum):
     COMPLIANT = 1
     NON_COMPLIANT = 2
     CURIOUS = 3
-    PANICKED = 4
+    FAMILIAR = 4
 
 
 class Evacuee(mg.GeoAgent):
@@ -65,6 +66,7 @@ class Evacuee(mg.GeoAgent):
     evacuated = False
     on_safe_roads = False
     diverted = False
+    status = ""
 
     previous_osmid = None
     behaviour: Behaviour | None = None
@@ -107,6 +109,15 @@ class Evacuee(mg.GeoAgent):
 
     @property
     def speed(self):
+        if (
+            self.behaviour is Behaviour.CURIOUS
+            and self.model.evacuating
+            and not self.in_car
+            and self.model.space.evacuation_zone.centre.buffer(200).contains(
+                Point(self.geometry.x, self.geometry.y)
+            )
+        ):
+            return self.walking_speed - 1
         return self.speed_limit if self.in_car else self.walking_speed
 
     @property
@@ -170,27 +181,33 @@ class Evacuee(mg.GeoAgent):
 
         self.status = "evacuating"
 
-        # current location index
-        source_idx = self.roads.get_nearest_node_idx((self.geometry.x, self.geometry.y))
+        if self.behaviour is Behaviour.FAMILIAR:
+            destination = Point(self.home.entrance_pos(not self.in_car))
+            self._path_select((destination.x, destination.y))
+        else:
+            # current location index
+            source_idx = self.roads.get_nearest_node_idx(
+                (self.geometry.x, self.geometry.y)
+            )
 
-        # calculate minimum distance to each evacuation point
-        distances = self.roads.i_graph.distances(
-            source=[source_idx],
-            target=(
-                self.model.space.exit_idx_drive
+            # calculate minimum distance to each evacuation point
+            distances = self.roads.i_graph.distances(
+                source=[source_idx],
+                target=(
+                    self.model.space.exit_idx_drive
+                    if self.in_car
+                    else self.model.space.exit_idx_walk
+                ),
+                weights="length",
+            )[0]
+
+            # chose nearest evacuation point
+            exit = (
+                self.model.space.exits_drive[np.argmin(distances)]
                 if self.in_car
-                else self.model.space.exit_idx_walk
-            ),
-            weights="length",
-        )[0]
-
-        # chose nearest evacuation point
-        exit = (
-            self.model.space.exits_drive[np.argmin(distances)]
-            if self.in_car
-            else self.model.space.exits_walk[np.argmin(distances)]
-        )
-        self._path_select((exit.geometry.x, exit.geometry.y))
+                else self.model.space.exits_walk[np.argmin(distances)]
+            )
+            self._path_select((exit.geometry.x, exit.geometry.y))
 
     def _update_location(self):
         origin_node = self.roads.nodes.iloc[self.route[self.route_index]]
@@ -423,8 +440,11 @@ class Evacuee(mg.GeoAgent):
     def _arrive_at_destination(self) -> None:
         # if the agent has just left the evacuation zone, stop and decide where to go next
         if self.status == "evacuating" or self.destination_building is None:
-            self.on_safe_roads = True
-            self.evacuated = True
+            if not self.model.space.evacuation_zone.geometry.contains(
+                Point(self.geometry.x, self.geometry.y)
+            ):
+                self.on_safe_roads = True
+                self.evacuated = True
             self.status = "parked"
             self.leave_time = self.model.simulation_time.time()
             self.destination_schedule_node = None

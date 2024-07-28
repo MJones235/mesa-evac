@@ -7,9 +7,11 @@ class EvacuationZone(mg.GeoAgent):
     type = "evacuation_zone"
     exits_walk: GeoDataFrame
     exits_drive: GeoDataFrame
+    centre: Point
 
     def __init__(self, unique_id, model, crs, centre_point: Point, radius: int) -> None:
         geometry: Polygon = centre_point.buffer(radius)
+        self.centre = centre_point
         super().__init__(unique_id=unique_id, model=model, geometry=geometry, crs=crs)
 
     def set_exits(self, edges: GeoDataFrame, walk: bool) -> None:
