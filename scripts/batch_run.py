@@ -1,4 +1,5 @@
 from scripts.create_video import create_video
+from src.agent.evacuee import Behaviour
 from src.model.model import EvacuationModel
 from shapely import Point
 from datetime import datetime
@@ -16,17 +17,25 @@ if __name__ == "__main__":
     # fixed parameters
     num_agents = 2000
     bomb_location = Point(424860, 564443)
-    # evacuation_start_h = 8
-    evacuation_start_m = 0
-    # simulation_start_h = 8
-    simulation_start_m = 0
+    evacuation_start_h = 8
+    evacuation_start_m = 30
+    simulation_start_h = 8
+    simulation_start_m = 29
     mean_evacuation_delay_m = 5
     car_use_pc = 50
     evacuation_zone_radius = 500
 
     # variable parameter
-    variable_name = "start_time"
-    variable_values = [i for i in range(24)]
+    variable_name = "agent_behaviour"
+    variable_values = [
+        {
+            Behaviour.NON_COMPLIANT: 0,
+            Behaviour.COMPLIANT: 1 - x / 10.0,
+            Behaviour.CURIOUS: x / 10.0,
+            Behaviour.FAMILIAR: 0,
+        }
+        for x in range(11)
+    ]
 
     metadata = [
         [
@@ -43,6 +52,10 @@ if __name__ == "__main__":
             "output_path",
             "mean_evacuation_delay_m",
             "car_use_pc",
+            "percent_non_compliant",
+            "percent_compliant",
+            "percent_curious",
+            "percent_familiar",
         ]
     ]
 
@@ -64,16 +77,17 @@ if __name__ == "__main__":
                 num_agents=num_agents,
                 bomb_location=bomb_location,
                 evacuation_zone_radius=evacuation_zone_radius,
-                evacuation_start_h=variable_value,
+                evacuation_start_h=evacuation_start_h,
                 evacuation_start_m=evacuation_start_m,
-                simulation_start_h=variable_value,
+                simulation_start_h=simulation_start_h,
                 simulation_start_m=simulation_start_m,
                 output_path=output_path + f"/{variable_name}-{variable_value}-run-{n}",
                 mean_evacuation_delay_m=mean_evacuation_delay_m,
                 car_use_pc=car_use_pc,
                 evacuate_on_foot=True,
                 sensor_locations=[],
-            ).run(96)
+                agent_behaviour=variable_value,
+            ).run(180)
 
             end_time = time.time()
 
@@ -87,13 +101,17 @@ if __name__ == "__main__":
                     num_agents,
                     bomb_location,
                     evacuation_zone_radius,
-                    variable_value,  # evacuation_start_h,
+                    evacuation_start_h,
                     evacuation_start_m,
-                    variable_value,  # simulation_start_h,
+                    simulation_start_h,
                     simulation_start_m,
                     output_path,
                     mean_evacuation_delay_m,
                     car_use_pc,
+                    variable_value[Behaviour.NON_COMPLIANT],
+                    variable_value[Behaviour.COMPLIANT],
+                    variable_value[Behaviour.CURIOUS],
+                    variable_value[Behaviour.FAMILIAR],
                 ]
             )
 

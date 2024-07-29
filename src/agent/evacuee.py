@@ -64,6 +64,7 @@ class Evacuee(mg.GeoAgent):
 
     requires_evacuation = False
     evacuated = False
+    going_home = False
     on_safe_roads = False
     diverted = False
     status = ""
@@ -117,7 +118,7 @@ class Evacuee(mg.GeoAgent):
                 Point(self.geometry.x, self.geometry.y)
             )
         ):
-            return self.walking_speed - 1
+            return self.walking_speed * 0.25
         return self.speed_limit if self.in_car else self.walking_speed
 
     @property
@@ -182,6 +183,7 @@ class Evacuee(mg.GeoAgent):
         self.status = "evacuating"
 
         if self.behaviour is Behaviour.FAMILIAR:
+            self.going_home = True
             destination = Point(self.home.entrance_pos(not self.in_car))
             self._path_select((destination.x, destination.y))
         else:
@@ -227,7 +229,6 @@ class Evacuee(mg.GeoAgent):
         if (
             self.model.evacuating
             and not self.requires_evacuation
-            and not self.behaviour is Behaviour.NON_COMPLIANT
             and self.model.space.evacuation_zone.geometry.contains(
                 Point(self.geometry.x, self.geometry.y)
             )
@@ -312,6 +313,13 @@ class Evacuee(mg.GeoAgent):
                     coords = self.roads.get_coords_from_idx(
                         self.route[self.route_index]
                     )
+                    if (
+                        self.status == "evacuating"
+                        and not self.model.space.evacuation_zone.geometry.contains(
+                            Point(coords)
+                        )
+                    ):
+                        self.evacuated = True
                     # if agent has crossed into evacuation zone
                     if (
                         self.model.evacuating
@@ -438,17 +446,18 @@ class Evacuee(mg.GeoAgent):
             self._path_select(self.destination_building.entrance_pos(not self.in_car))
 
     def _arrive_at_destination(self) -> None:
+        if self.going_home and self.model.space.evacuation_zone.geometry.contains(
+            Point(self.home.entrance_pos(not self.in_car))
+        ):
+            pass
         # if the agent has just left the evacuation zone, stop and decide where to go next
-        if self.status == "evacuating" or self.destination_building is None:
-            if not self.model.space.evacuation_zone.geometry.contains(
-                Point(self.geometry.x, self.geometry.y)
-            ):
-                self.on_safe_roads = True
-                self.evacuated = True
+        elif self.status == "evacuating" or self.destination_building is None:
+            self.evacuated = True
             self.status = "parked"
             self.leave_time = self.model.simulation_time.time()
             self.destination_schedule_node = None
             self.destination_building = None
+            self._divert()
         # otherwise, agent will enter a building
         else:
             self.model.space.move_evacuee(
