@@ -5,6 +5,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 from scripts.load_data_from_file import load_data_from_file
+from src.agent.evacuee import Behaviour
 
 
 def plot_environment(output_path: str) -> None:
@@ -246,3 +247,81 @@ def plot_number_agents_against_time_of_day(batch_path: str) -> None:
     sns.move_legend(g, "upper right", frameon=True)
     g.figure.tight_layout()
     plt.savefig(batch_path + "/agents_against_time_of_day.png")
+
+
+def _get_behaviour_col(behaviour: Behaviour) -> str:
+    if behaviour is Behaviour.COMPLIANT:
+        return "percent_compliant"
+    elif behaviour is Behaviour.CURIOUS:
+        return "percent_curious"
+    if behaviour is Behaviour.NON_COMPLIANT:
+        return "percent_non_compliant"
+    elif behaviour is Behaviour.FAMILIAR:
+        return "percent_familiar"
+
+
+def plot_agents_against_behaviour(
+    batch_path: str, independent_variable: Behaviour
+) -> None:
+    metadata = pd.read_csv(batch_path + "/metadata.csv", header=0)
+    data = {
+        "proportion_with_behaviour": [],
+        "num_evacuated_10_mins": [],
+        "num_evacuated_15_mins": [],
+        "num_evacuated_20_mins": [],
+        "num_evacuated_25_mins": [],
+        "num_evacuated_30_mins": [],
+        "number_to_evacuate": [],
+    }
+
+    behaviour_col = _get_behaviour_col(independent_variable)
+
+    for row in metadata.itertuples():
+        path = row.output_path[row.output_path.rindex("/") + 1 :]
+        model_df = pd.read_csv(batch_path + f"/{path}/{path}.model.csv")
+
+        row_10_mins = model_df.iloc[60]
+        row_15_mins = model_df.iloc[90]
+        row_20_mins = model_df.iloc[120]
+        row_25_mins = model_df.iloc[150]
+        row_30_mins = model_df.iloc[180]
+
+        data["proportion_with_behaviour"].append(getattr(row, behaviour_col))
+        data["number_to_evacuate"].append(row_10_mins.number_to_evacuate)
+        data["num_evacuated_10_mins"].append(row_10_mins.number_evacuated)
+        data["num_evacuated_15_mins"].append(row_15_mins.number_evacuated)
+        data["num_evacuated_20_mins"].append(row_20_mins.number_evacuated)
+        data["num_evacuated_25_mins"].append(row_25_mins.number_evacuated)
+        data["num_evacuated_30_mins"].append(row_30_mins.number_evacuated)
+
+    df = pd.DataFrame.from_dict(data)
+
+    sns.set_theme(font_scale=1.2, style="whitegrid")
+
+    g = sns.relplot(
+        data=df.melt(
+            "proportion_with_behaviour", var_name="variable", value_name="count"
+        ),
+        x="proportion_with_behaviour",
+        y="count",
+        hue="variable",
+        kind="line",
+    )
+    g.set(xlabel=f"Proportion {independent_variable}")
+    g.set(ylabel="Number of people")
+    g.legend.set_title("")
+    for t, l in zip(
+        g.legend.texts,
+        [
+            "Evacuated after 10 mins",
+            "Evacuated after 15 mins",
+            "Evacuated after 20 mins",
+            "Evacuated after 25 mins",
+            "Evacuated after 30 mins",
+            "Requiring evacuation",
+        ],
+    ):
+        t.set_text(l)
+    sns.move_legend(g, "upper right", frameon=True)
+    g.figure.tight_layout()
+    plt.savefig(batch_path + "/agents_against_behaviour.png")

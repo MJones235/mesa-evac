@@ -7,7 +7,9 @@ from scripts.create_figures import (
     plot_execution_time_against_number_of_agents,
     plot_agent_evacuated_against_total_simulated,
     plot_number_agents_against_time_of_day,
+    plot_agents_against_behaviour,
 )
+from src.agent.evacuee import Behaviour
 
 
 class CreatePlotsTest(TestCase):
@@ -16,7 +18,7 @@ class CreatePlotsTest(TestCase):
     def test_plot_environment(self):
         plot_environment(self.output_path)
 
-    batch_path = "outputs/batch-20240725175115"
+    batch_path = "outputs/batch-20240730163009"
 
     def plot_number_agents_against_evacuation_zone_size(self):
         plot_number_agents_against_evacuation_zone_size(self.batch_path)
@@ -33,6 +35,9 @@ class CreatePlotsTest(TestCase):
     def plot_number_agents_against_time_of_day(self):
         plot_number_agents_against_time_of_day(self.batch_path)
 
+    def plot_agents_against_behaviour(self):
+        plot_agents_against_behaviour(self.batch_path, Behaviour.FAMILIAR)
+
 
 if __name__ == "__main__":
-    CreatePlotsTest().plot_number_agents_against_time_of_day()
+    CreatePlotsTest().plot_agents_against_behaviour()

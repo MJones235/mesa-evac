@@ -8,7 +8,7 @@ import os
 import csv
 
 if __name__ == "__main__":
-    n_runs = 1
+    n_runs = 10
 
     data_file_prefix = "newcastle-md"
     current_time = datetime.fromtimestamp(time.time()).strftime("%Y%m%d%H%M%S")
@@ -20,7 +20,7 @@ if __name__ == "__main__":
     evacuation_start_h = 8
     evacuation_start_m = 30
     simulation_start_h = 8
-    simulation_start_m = 29
+    simulation_start_m = 30
     mean_evacuation_delay_m = 5
     car_use_pc = 50
     evacuation_zone_radius = 500
@@ -31,8 +31,8 @@ if __name__ == "__main__":
         {
             Behaviour.NON_COMPLIANT: 0,
             Behaviour.COMPLIANT: 1 - x / 10.0,
-            Behaviour.CURIOUS: x / 10.0,
-            Behaviour.FAMILIAR: 0,
+            Behaviour.CURIOUS: 0,
+            Behaviour.FAMILIAR: x / 10.0,
         }
         for x in range(11)
     ]
