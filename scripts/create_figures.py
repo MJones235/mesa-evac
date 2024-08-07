@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+import numpy as np
 
 from scripts.load_data_from_file import load_data_from_file
 from src.agent.evacuee import Behaviour
@@ -93,15 +94,25 @@ def plot_execution_time_against_number_of_agents(batch_path: str) -> None:
     sns.set_theme(font_scale=1.2, style="whitegrid")
 
     g = sns.relplot(
-        data=df,
+        data=df.melt("number_of_agents", var_name="variable", value_name="count"),
         x="number_of_agents",
-        y="execution_time",
+        y="count",
+        hue="variable",
         kind="line",
+        legend=False,
     )
     g.set(xlabel="Number of agents")
-    g.set(ylabel="Execution time (s)")
+    g.set(ylabel="Execution time (seconds)")
     g.figure.tight_layout()
     plt.savefig(batch_path + "/execution_time_against_num_agents.png")
+    # uncomment to fit quadratic
+    """
+    x = [x / 1000 for x in data["number_of_agents"]]
+    z = np.polyfit(x, data["execution_time"], 2)
+    print(z)
+    plt.plot(x, np.polyval(z, x))
+    plt.show()
+    """
 
 
 def plot_agent_evacuated_against_total_simulated(batch_path: str) -> None:
@@ -234,6 +245,7 @@ def plot_number_agents_against_time_of_day(batch_path: str) -> None:
     )
     g.set(xlabel="Time of day (hr)")
     g.set(ylabel="Number of people")
+    g.legend.set_frame_on(True)
     g.legend.set_title("")
     for t, l in zip(
         g.legend.texts,
@@ -244,8 +256,6 @@ def plot_number_agents_against_time_of_day(batch_path: str) -> None:
         ],
     ):
         t.set_text(l)
-    sns.move_legend(g, "upper right", frameon=True)
-    g.figure.tight_layout()
     plt.savefig(batch_path + "/agents_against_time_of_day.png")
 
 
@@ -269,8 +279,7 @@ def plot_agents_against_behaviour(
         "num_evacuated_10_mins": [],
         "num_evacuated_15_mins": [],
         "num_evacuated_20_mins": [],
-        "num_evacuated_25_mins": [],
-        "num_evacuated_30_mins": [],
+        # "num_evacuated_25_mins": [],
         "number_to_evacuate": [],
     }
 
@@ -284,15 +293,13 @@ def plot_agents_against_behaviour(
         row_15_mins = model_df.iloc[90]
         row_20_mins = model_df.iloc[120]
         row_25_mins = model_df.iloc[150]
-        row_30_mins = model_df.iloc[180]
 
         data["proportion_with_behaviour"].append(getattr(row, behaviour_col))
         data["number_to_evacuate"].append(row_10_mins.number_to_evacuate)
         data["num_evacuated_10_mins"].append(row_10_mins.number_evacuated)
         data["num_evacuated_15_mins"].append(row_15_mins.number_evacuated)
         data["num_evacuated_20_mins"].append(row_20_mins.number_evacuated)
-        data["num_evacuated_25_mins"].append(row_25_mins.number_evacuated)
-        data["num_evacuated_30_mins"].append(row_30_mins.number_evacuated)
+        # data["num_evacuated_25_mins"].append(row_25_mins.number_evacuated)
 
     df = pd.DataFrame.from_dict(data)
 
@@ -307,6 +314,7 @@ def plot_agents_against_behaviour(
         hue="variable",
         kind="line",
     )
+    g.legend.set_frame_on(True)
     g.set(xlabel=f"Proportion {independent_variable}")
     g.set(ylabel="Number of people")
     g.legend.set_title("")
@@ -316,12 +324,24 @@ def plot_agents_against_behaviour(
             "Evacuated after 10 mins",
             "Evacuated after 15 mins",
             "Evacuated after 20 mins",
-            "Evacuated after 25 mins",
-            "Evacuated after 30 mins",
+            # "Evacuated after 25 mins",
             "Requiring evacuation",
         ],
     ):
         t.set_text(l)
-    sns.move_legend(g, "upper right", frameon=True)
-    g.figure.tight_layout()
     plt.savefig(batch_path + "/agents_against_behaviour.png")
+
+
+def plot_rayleigh_dist():
+    fig, (ax1, ax2) = plt.subplots(1, 2)
+    sns.set_theme(font_scale=1.2, style="whitegrid")
+    d = np.random.rayleigh(300, 1000000)
+    g = sns.kdeplot(d, ax=ax1)
+    g.set(xlabel="Time (seconds)")
+    g.set(ylabel="Probability density")
+    g.figure.tight_layout()
+    g2 = sns.kdeplot(d, ax=ax2, cumulative=True)
+    g2.set(xlabel="Time (seconds)")
+    g2.set(ylabel="Cumulative density")
+    g2.figure.tight_layout()
+    plt.show()

@@ -104,7 +104,9 @@ class Evacuee(mg.GeoAgent):
         if mean_evacuation_delay_m is None:
             self.evacuation_delay = timedelta(seconds=0)
         else:
-            self.evacuation_delay = self._response_time(mean_evacuation_delay_m)
+            self.evacuation_delay = timedelta(
+                seconds=np.random.rayleigh(scale=mean_evacuation_delay_m * 60)
+            )
 
         self.evacuate_on_foot = evacuate_on_foot
 
@@ -427,11 +429,6 @@ class Evacuee(mg.GeoAgent):
         edge = self._get_edge()
         self.speed_limit = self._get_speed_limit(edge)
         return 60 * 60 / 1000 * (edge["length"] - self.distance_along_edge) / self.speed
-
-    def _response_time(self, mean_evacuation_delay_m: int) -> timedelta:
-        seconds = np.random.normal(mean_evacuation_delay_m * 60, 120)
-        seconds = seconds if seconds > 0 else 0.0
-        return timedelta(seconds=seconds)
 
     def _random_point_in_polygon(self, geometry: Polygon):
         # A buffer is added because the method hangs if the polygon is too small
