@@ -19,7 +19,7 @@ class CreatePlotsTest(TestCase):
     def test_plot_environment(self):
         plot_environment(self.output_path)
 
-    batch_path = "outputs/batch-20240806231644"
+    batch_path = "outputs/batch-20240807134154"
 
     def plot_number_agents_against_evacuation_zone_size(self):
         plot_number_agents_against_evacuation_zone_size(self.batch_path)
@@ -37,7 +37,7 @@ class CreatePlotsTest(TestCase):
         plot_number_agents_against_time_of_day(self.batch_path)
 
     def plot_agents_against_behaviour(self):
-        plot_agents_against_behaviour(self.batch_path, Behaviour.NON_COMPLIANT)
+        plot_agents_against_behaviour(self.batch_path, Behaviour.CURIOUS)
 
     def plot_rayleigh_dist(self):
         plot_rayleigh_dist()

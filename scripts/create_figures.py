@@ -269,6 +269,16 @@ def _get_behaviour_col(behaviour: Behaviour) -> str:
     elif behaviour is Behaviour.FAMILIAR:
         return "percent_familiar"
 
+def _get_behaviour_text(behaviour: Behaviour) -> str:
+    if behaviour is Behaviour.COMPLIANT:
+        return "compliant"
+    elif behaviour is Behaviour.CURIOUS:
+        return "curious"
+    if behaviour is Behaviour.NON_COMPLIANT:
+        return "non-compliant"
+    elif behaviour is Behaviour.FAMILIAR:
+        return "familiarity-seeking"
+
 
 def plot_agents_against_behaviour(
     batch_path: str, independent_variable: Behaviour
@@ -315,8 +325,9 @@ def plot_agents_against_behaviour(
         kind="line",
     )
     g.legend.set_frame_on(True)
-    g.set(xlabel=f"Proportion {independent_variable}")
+    g.set(xlabel=f"Proportion of agents displaying {_get_behaviour_text(independent_variable)} behaviour")
     g.set(ylabel="Number of people")
+    plt.ylim((0, 380))
     g.legend.set_title("")
     for t, l in zip(
         g.legend.texts,

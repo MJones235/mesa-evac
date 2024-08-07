@@ -40,8 +40,8 @@ if __name__ == "__main__":
         {
             Behaviour.NON_COMPLIANT: 0,
             Behaviour.COMPLIANT: 1 - x / 10.0,
-            Behaviour.CURIOUS: 0,
-            Behaviour.FAMILIAR: x / 10.0,
+            Behaviour.CURIOUS: x / 10.0,
+            Behaviour.FAMILIAR: 0,
         }
         for x in range(11)
     ]
