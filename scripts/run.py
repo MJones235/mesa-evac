@@ -97,17 +97,20 @@ def run_and_generate_video(
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
+    monument = Point(424860, 564443)
+    st_james = Point(424317.8, 564626.7)
+
     EvacuationModel(
         city=data_file_prefix,
         domain_path=f"data/{data_file_prefix}/domain.gpkg",
         agent_data_path=f"data/{data_file_prefix}/agent_data.csv",
         num_agents=num_agents,
-        bomb_location=Point(424860, 564443),
-        evacuation_zone_radius=800,
-        evacuation_start_h=8,
-        evacuation_start_m=30,
-        simulation_start_h=8,
-        simulation_start_m=29,
+        bomb_location=st_james,
+        evacuation_zone_radius=500,
+        evacuation_start_h=15,
+        evacuation_start_m=0,
+        simulation_start_h=15,
+        simulation_start_m=0,
         output_path=output_path + f"/{current_time}",
         mean_evacuation_delay_m=5,
         car_use_pc=50,
@@ -115,9 +118,9 @@ def run_and_generate_video(
         sensor_locations=[Point(424856, 564987)],
         agent_behaviour={
             Behaviour.NON_COMPLIANT: 0,
-            Behaviour.COMPLIANT: 0,
+            Behaviour.COMPLIANT: 1,
             Behaviour.CURIOUS: 0,
-            Behaviour.FAMILIAR: 1,
+            Behaviour.FAMILIAR: 0,
         },
     ).run(steps)
 
@@ -130,12 +133,12 @@ def run_and_generate_video(
 if __name__ == "__main__":
     args = make_parser().parse_args()
 
-    if args.city in ["newcastle-xs", "newcastle-sm", "newcastle-md"]:
+    if args.city in ["newcastle-xs", "newcastle-sm", "newcastle-md", "football"]:
         data_file_prefix = args.city
 
     else:
         raise ValueError(
-            "Invalid city name. Choose from [newcastle-xs, newcastle-sm, newcastle-md]"
+            "Invalid city name. Choose from [newcastle-xs, newcastle-sm, newcastle-md, football]"
         )
 
     if args.interactive:

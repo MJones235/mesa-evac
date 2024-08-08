@@ -9,6 +9,7 @@ from shapely import Point
 
 from src.agent.building import (
     Building,
+    FootballStadium,
     Home,
     RecreationBuilding,
     School,
@@ -34,6 +35,7 @@ class City(mg.GeoSpace):
     homes: Tuple[Building]
     work_buildings: Tuple[Building]
     recreation_buildings: Tuple[Building]
+    football_stadiums: Tuple[Building]
     shops = Tuple[Building]
     supermarkets = Tuple[Building]
     schools = Tuple[Building]
@@ -64,6 +66,7 @@ class City(mg.GeoSpace):
         self.homes = ()
         self.work_buildings = ()
         self.recreation_buildings = ()
+        self.football_stadiums = ()
         self.shops = ()
         self.supermarkets = ()
         self.schools = ()
@@ -91,6 +94,9 @@ class City(mg.GeoSpace):
     def get_random_school(self) -> Building:
         return self._get_random_building(self.schools)
 
+    def get_random_football_stadium(self) -> Building:
+        return self._get_random_building(self.football_stadiums)
+
     def _get_random_building(self, buildings: tuple[Building]) -> Building:
         if len(buildings) == 0:
             buildings = self.work_buildings
@@ -106,14 +112,15 @@ class City(mg.GeoSpace):
 
     def add_buildings(self, agents) -> None:
         super().add_agents(agents)
-        homes, works, recreation_buildings, shops, supermarkets, schools = (
-            [],
-            [],
-            [],
-            [],
-            [],
-            [],
-        )
+        (
+            homes,
+            works,
+            recreation_buildings,
+            shops,
+            supermarkets,
+            schools,
+            football_stadiums,
+        ) = ([], [], [], [], [], [], [])
         for agent in agents:
             if isinstance(agent, Building):
                 self._buildings[agent.unique_id] = agent
@@ -129,6 +136,8 @@ class City(mg.GeoSpace):
                     supermarkets.append(agent)
                 elif isinstance(agent, School):
                     schools.append(agent)
+                elif isinstance(agent, FootballStadium):
+                    football_stadiums.append(agent)
 
         self.homes = self.homes + tuple(homes)
         self.work_buildings = self.work_buildings = tuple(works)
@@ -138,6 +147,7 @@ class City(mg.GeoSpace):
         self.shops = self.shops + tuple(shops)
         self.supermarkets = self.supermarkets = tuple(supermarkets)
         self.schools = self.schools + tuple(schools)
+        self.football_stadiums = self.football_stadiums + tuple(football_stadiums)
 
     def get_evacuees_by_pos(
         self, float_pos: mesa.space.FloatCoordinate

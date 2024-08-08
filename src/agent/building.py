@@ -67,3 +67,10 @@ class School(Building):
 
     def __init__(self, unique_id, model, geometry, crs) -> None:
         super().__init__(unique_id, model, geometry, crs)
+
+
+class FootballStadium(Building):
+    type = "football_stadium"
+
+    def __init__(self, unique_id, model, geometry, crs) -> None:
+        super().__init__(unique_id, model, geometry, crs)

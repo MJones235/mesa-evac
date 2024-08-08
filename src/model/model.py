@@ -11,6 +11,7 @@ from datetime import datetime, timedelta, time, date
 
 from src.agent.building import (
     Building,
+    FootballStadium,
     Home,
     RecreationBuilding,
     School,
@@ -217,6 +218,7 @@ class EvacuationModel(mesa.Model):
                 {"leisure": True, "amenity": ["bar", "cafe", "pub", "restaurant"]}
             ),
         )
+        add_building_agents(FootballStadium, load_osm_buildings({"leisure": "stadium"}))
 
         all_buildings_df = load_osm_buildings({"building": True})
         work_places_df = all_buildings_df.overlay(homes, how="difference")
@@ -230,6 +232,7 @@ class EvacuationModel(mesa.Model):
             *self.space.supermarkets,
             *self.space.shops,
             *self.space.schools,
+            *self.space.football_stadiums,
         ):
             building.entrance_pos_walk = self.roads_walk.get_nearest_node_coords(
                 building.centroid

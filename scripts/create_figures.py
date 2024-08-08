@@ -289,7 +289,7 @@ def plot_agents_against_behaviour(
         "num_evacuated_10_mins": [],
         "num_evacuated_15_mins": [],
         "num_evacuated_20_mins": [],
-        # "num_evacuated_25_mins": [],
+        "num_evacuated_25_mins": [],
         "number_to_evacuate": [],
     }
 
@@ -309,7 +309,7 @@ def plot_agents_against_behaviour(
         data["num_evacuated_10_mins"].append(row_10_mins.number_evacuated)
         data["num_evacuated_15_mins"].append(row_15_mins.number_evacuated)
         data["num_evacuated_20_mins"].append(row_20_mins.number_evacuated)
-        # data["num_evacuated_25_mins"].append(row_25_mins.number_evacuated)
+        data["num_evacuated_25_mins"].append(row_25_mins.number_evacuated)
 
     df = pd.DataFrame.from_dict(data)
 
@@ -335,7 +335,7 @@ def plot_agents_against_behaviour(
             "Evacuated after 10 mins",
             "Evacuated after 15 mins",
             "Evacuated after 20 mins",
-            # "Evacuated after 25 mins",
+            "Evacuated after 25 mins",
             "Requiring evacuation",
         ],
     ):

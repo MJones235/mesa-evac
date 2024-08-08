@@ -13,6 +13,7 @@ import pointpats
 from src.agent.building import Building
 
 from src.agent.schedule import (
+    FootballMatchSchedule,
     Schedule,
     ChildSchedule,
     RetiredAdultSchedule,
@@ -152,6 +153,8 @@ class Evacuee(mg.GeoAgent):
             self.schedule = WorkingAdultSchedule(self)
         elif self.category == 2:
             self.schedule = RetiredAdultSchedule(self)
+        elif self.category == 3:
+            self.schedule = FootballMatchSchedule(self)
 
     def _initialise_position(self) -> None:
         (

@@ -170,6 +170,8 @@ class Schedule:
             return self.agent.model.space.get_random_shop()
         elif "recreation" in node:
             return self.agent.model.space.get_random_recreation()
+        elif "football" in node:
+            return self.agent.model.space.get_random_football_stadium()
         else:
             ValueError("Unknown location: {0}".format(node))
 
@@ -197,6 +199,10 @@ class Schedule:
         elif "recreation" in node:
             return self._random_point_in_polygon(
                 self.agent.model.space.get_random_recreation().geometry
+            )
+        elif "football" in node:
+            return self._random_point_in_polygon(
+                self.agent.model.space.get_random_football_stadium().geometry
             )
         else:
             ValueError("Unknown location: {0}".format(node))
@@ -369,6 +375,25 @@ class RetiredAdultSchedule(Schedule):
         ("supermarket 2", "home 3", {"p": 1}),
         ("shop 2", "home 3", {"p": 1}),
         ("recreation 2", "home 3", {"p": 1}),
+    ]
+
+    def __init__(self, agent: Evacuee) -> None:
+        super().__init__(agent, self._nodes, self._edges)
+
+
+class FootballMatchSchedule(Schedule):
+    _nodes = [
+        ("home", {"leave_at": time(hour=14), "variation": timedelta(minutes=30)}),
+        ("football", {"leave_at": time(hour=17), "variation": timedelta(minutes=15)}),
+        (
+            "home 2",
+            {"leave_at": time(hour=22), "variation": timedelta(hours=1)},
+        ),
+    ]
+
+    _edges = [
+        ("home", "football", {"p": 1}),
+        ("football", "home 2", {"p": 1}),
     ]
 
     def __init__(self, agent: Evacuee) -> None:
