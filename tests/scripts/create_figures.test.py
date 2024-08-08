@@ -19,11 +19,7 @@ class CreatePlotsTest(TestCase):
     def test_plot_environment(self):
         plot_environment(self.output_path)
 
-<<<<<<< HEAD
     batch_path = "outputs/batch-20240807134154"
-=======
-    batch_path = "outputs/batch-20240807094242"
->>>>>>> e1a7bc4 (model football match)
 
     def plot_number_agents_against_evacuation_zone_size(self):
         plot_number_agents_against_evacuation_zone_size(self.batch_path)
