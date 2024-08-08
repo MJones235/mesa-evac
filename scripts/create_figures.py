@@ -27,47 +27,6 @@ def plot_environment(output_path: str) -> None:
     plt.savefig(output_path + "-environment" + ".png")
 
 
-def plot_number_agents_against_evacuation_zone_size(batch_path: str) -> None:
-    metadata = pd.read_csv(batch_path + "/metadata.csv", header=0)
-    data = {
-        "evacuation_zone_radius": [],
-        "number_to_evacuate": [],
-        "number_evacuated": [],
-    }
-    for row in metadata.itertuples():
-        model_df = pd.read_csv(
-            batch_path
-            + f"/radius-{row.evacuation_zone_radius}-run-{row.n}"
-            + f"/radius-{row.evacuation_zone_radius}-run-{row.n}.model.csv"
-        )
-        final_row = model_df.iloc[-1]
-        data["evacuation_zone_radius"].append(row.evacuation_zone_radius)
-        data["number_to_evacuate"].append(final_row.number_to_evacuate)
-        data["number_evacuated"].append(final_row.number_evacuated)
-
-    df = pd.DataFrame.from_dict(data)
-
-    sns.set_theme(font_scale=1.2, style="whitegrid")
-
-    g = sns.relplot(
-        data=df.melt("evacuation_zone_radius", var_name="variable", value_name="count"),
-        x="evacuation_zone_radius",
-        y="count",
-        hue="variable",
-        kind="line",
-    )
-    g.set(xlabel="Evacuation zone radius (m)")
-    g.set(ylabel="Number of people")
-    g.legend.set_title("")
-    for t, l in zip(
-        g.legend.texts, ["Requiring evacuation", "Evacuated after 10 mins"]
-    ):
-        t.set_text(l)
-    sns.move_legend(g, "upper center", frameon=True)
-    g.figure.tight_layout()
-    plt.savefig(batch_path + "/agents_against_evacuation_zone_radius.png")
-
-
 def plot_traffic_sensor_data(output_path: str) -> None:
     df = pd.read_csv(output_path + ".traffic-sensors.csv", header=0)
     df["time"] = pd.to_datetime(df["time"])
@@ -173,19 +132,27 @@ def plot_number_agents_against_evacuation_zone_size(batch_path: str) -> None:
     metadata = pd.read_csv(batch_path + "/metadata.csv", header=0)
     data = {
         "evacuation_zone_radius": [],
+        "num_evacuated_10_mins": [],
+        "num_evacuated_15_mins": [],
+        "num_evacuated_20_mins": [],
         "number_to_evacuate": [],
-        "number_evacuated": [],
     }
     for row in metadata.itertuples():
         model_df = pd.read_csv(
             batch_path
-            + f"/radius-{row.evacuation_zone_radius}-run-{row.n}"
-            + f"/radius-{row.evacuation_zone_radius}-run-{row.n}.model.csv"
+            + f"/evacuation_zone_radius-{row.evacuation_zone_radius}-run-{row.n}"
+            + f"/evacuation_zone_radius-{row.evacuation_zone_radius}-run-{row.n}.model.csv"
         )
-        final_row = model_df.iloc[-1]
+        
+        row_10_mins = model_df.iloc[60]
+        row_15_mins = model_df.iloc[90]
+        row_20_mins = model_df.iloc[120]
+
         data["evacuation_zone_radius"].append(row.evacuation_zone_radius)
-        data["number_to_evacuate"].append(final_row.number_to_evacuate)
-        data["number_evacuated"].append(final_row.number_evacuated)
+        data["number_to_evacuate"].append(row_10_mins.number_to_evacuate)
+        data["num_evacuated_10_mins"].append(row_10_mins.number_evacuated)
+        data["num_evacuated_15_mins"].append(row_15_mins.number_evacuated)
+        data["num_evacuated_20_mins"].append(row_20_mins.number_evacuated)
 
     df = pd.DataFrame.from_dict(data)
 
@@ -202,7 +169,7 @@ def plot_number_agents_against_evacuation_zone_size(batch_path: str) -> None:
     g.set(ylabel="Number of people")
     g.legend.set_title("")
     for t, l in zip(
-        g.legend.texts, ["Requiring evacuation", "Evacuated after 10 mins"]
+        g.legend.texts, ["Evacuated after 10 mins", "Evacuated after 15 mins", "Evacuated after 20 mins", "Requiring evacuation"]
     ):
         t.set_text(l)
     sns.move_legend(g, "upper center", frameon=True)

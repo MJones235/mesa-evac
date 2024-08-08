@@ -19,7 +19,7 @@ class CreatePlotsTest(TestCase):
     def test_plot_environment(self):
         plot_environment(self.output_path)
 
-    batch_path = "outputs/batch-20240807134154"
+    batch_path = "outputs/batch-20240807193506"
 
     def plot_number_agents_against_evacuation_zone_size(self):
         plot_number_agents_against_evacuation_zone_size(self.batch_path)
@@ -44,4 +44,4 @@ class CreatePlotsTest(TestCase):
 
 
 if __name__ == "__main__":
-    CreatePlotsTest().plot_agents_against_behaviour()
+    CreatePlotsTest().plot_execution_time_against_num_agents()
