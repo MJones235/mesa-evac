@@ -9,15 +9,19 @@ from scripts.create_figures import (
     plot_number_agents_against_time_of_day,
     plot_agents_against_behaviour,
     plot_rayleigh_dist,
+    plot_density,
 )
 from src.agent.evacuee import Behaviour
 
 
 class CreatePlotsTest(TestCase):
-    output_path = "outputs/newcastle-md/20240709143036/20240709143036"
+    output_path = "outputs/football/20240820172916/20240820172916"
 
     def test_plot_environment(self):
         plot_environment(self.output_path)
+
+    def test_plot_density(self):
+        plot_density(self.output_path)
 
     batch_path = "outputs/batch-20240807193506"
 
@@ -44,4 +48,4 @@ class CreatePlotsTest(TestCase):
 
 
 if __name__ == "__main__":
-    CreatePlotsTest().plot_execution_time_against_num_agents()
+    CreatePlotsTest().test_plot_density()

@@ -4,6 +4,8 @@ import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
 import numpy as np
+import geopandas as gpd
+from shapely import Point
 
 from scripts.load_data_from_file import load_data_from_file
 from src.agent.evacuee import Behaviour
@@ -12,19 +14,21 @@ from src.agent.evacuee import Behaviour
 def plot_environment(output_path: str) -> None:
     (_, _, graph, _, _, building_df) = load_data_from_file(output_path)
 
+    """
     _, ax = ox.plot_graph(
         graph,
         show=False,
-        node_size=2,
+        node_size=0,
         edge_linewidth=1,
         bgcolor="#fff",
         edge_color="#000",
         node_color="#000",
     )
+    """
 
-    building_df.plot(ax=ax, color="#c7c3c3")
+    building_df.plot()
 
-    plt.savefig(output_path + "-environment" + ".png")
+    plt.savefig(output_path + "-buildings" + ".png")
 
 
 def plot_traffic_sensor_data(output_path: str) -> None:
@@ -143,7 +147,7 @@ def plot_number_agents_against_evacuation_zone_size(batch_path: str) -> None:
             + f"/evacuation_zone_radius-{row.evacuation_zone_radius}-run-{row.n}"
             + f"/evacuation_zone_radius-{row.evacuation_zone_radius}-run-{row.n}.model.csv"
         )
-        
+
         row_10_mins = model_df.iloc[60]
         row_15_mins = model_df.iloc[90]
         row_20_mins = model_df.iloc[120]
@@ -169,7 +173,13 @@ def plot_number_agents_against_evacuation_zone_size(batch_path: str) -> None:
     g.set(ylabel="Number of people")
     g.legend.set_title("")
     for t, l in zip(
-        g.legend.texts, ["Evacuated after 10 mins", "Evacuated after 15 mins", "Evacuated after 20 mins", "Requiring evacuation"]
+        g.legend.texts,
+        [
+            "Evacuated after 10 mins",
+            "Evacuated after 15 mins",
+            "Evacuated after 20 mins",
+            "Requiring evacuation",
+        ],
     ):
         t.set_text(l)
     sns.move_legend(g, "upper center", frameon=True)
@@ -236,6 +246,7 @@ def _get_behaviour_col(behaviour: Behaviour) -> str:
     elif behaviour is Behaviour.FAMILIAR:
         return "percent_familiar"
 
+
 def _get_behaviour_text(behaviour: Behaviour) -> str:
     if behaviour is Behaviour.COMPLIANT:
         return "compliant"
@@ -292,7 +303,9 @@ def plot_agents_against_behaviour(
         kind="line",
     )
     g.legend.set_frame_on(True)
-    g.set(xlabel=f"Proportion of agents displaying {_get_behaviour_text(independent_variable)} behaviour")
+    g.set(
+        xlabel=f"Proportion of agents displaying {_get_behaviour_text(independent_variable)} behaviour"
+    )
     g.set(ylabel="Number of people")
     plt.ylim((0, 380))
     g.legend.set_title("")
@@ -322,4 +335,44 @@ def plot_rayleigh_dist():
     g2.set(xlabel="Time (seconds)")
     g2.set(ylabel="Cumulative density")
     g2.figure.tight_layout()
+    plt.show()
+
+
+def plot_density(output_path: str):
+    (agent_df, _, graph, _, evacuation_zone, building_df) = load_data_from_file(
+        output_path
+    )
+
+    f, ax = ox.plot_graph(
+        graph,
+        show=False,
+        node_size=0,
+        edge_linewidth=1,
+        bgcolor="#fff",
+        edge_color="#000",
+        edge_alpha=0.5,
+    )
+
+    df = agent_df.query("Step == 0")
+    df["x"] = df.apply(lambda row: row.location.x, axis=1)
+    df["y"] = df.apply(lambda row: row.location.y, axis=1)
+
+    evac_zone_df = gpd.GeoDataFrame(
+        [{"geometry": Point(424317.8, 564626.7).buffer(x)} for x in [100, 200, 400]]
+    ).set_crs("EPSG:27700")
+
+    sns.kdeplot(
+        data=df,
+        x="x",
+        y="y",
+        fill=True,
+        legend=True,
+        cmap="coolwarm",
+        alpha=0.3,
+        levels=6,
+        ax=ax,
+    )
+
+    evac_zone_df.plot(ax=ax, edgecolor="black", facecolor="none")
+
     plt.show()

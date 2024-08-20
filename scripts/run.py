@@ -23,15 +23,21 @@ def make_parser():
     return parser
 
 
+def _get_bomb_location(city: str) -> Point:
+    monument = Point(424860, 564443)
+    st_james = Point(424317.8, 564626.7)
+    return st_james if city == "football" else monument
+
+
 def run_interactively(data_file_prefix: str) -> None:
     model_params = {
         "city": data_file_prefix,
         "domain_path": f"data/{data_file_prefix}/domain.gpkg",
         "agent_data_path": f"data/{data_file_prefix}/agent_data.csv",
         "num_agents": mesa.visualization.Slider(
-            "Number of evacuees", value=2000, min_value=100, max_value=5000, step=100
+            "Number of evacuees", value=2000, min_value=0, max_value=5000, step=100
         ),
-        "bomb_location": Point(424860, 564443),
+        "bomb_location": _get_bomb_location(data_file_prefix),
         "evacuation_zone_radius": mesa.visualization.Slider(
             "Evacuation zone radius (m)",
             value=400,
@@ -97,15 +103,12 @@ def run_and_generate_video(
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
-    monument = Point(424860, 564443)
-    st_james = Point(424317.8, 564626.7)
-
     EvacuationModel(
         city=data_file_prefix,
         domain_path=f"data/{data_file_prefix}/domain.gpkg",
         agent_data_path=f"data/{data_file_prefix}/agent_data.csv",
         num_agents=num_agents,
-        bomb_location=st_james,
+        bomb_location=_get_bomb_location(data_file_prefix),
         evacuation_zone_radius=500,
         evacuation_start_h=15,
         evacuation_start_m=0,
@@ -118,8 +121,8 @@ def run_and_generate_video(
         sensor_locations=[Point(424856, 564987)],
         agent_behaviour={
             Behaviour.NON_COMPLIANT: 0,
-            Behaviour.COMPLIANT: 1,
-            Behaviour.CURIOUS: 0,
+            Behaviour.COMPLIANT: 0,
+            Behaviour.CURIOUS: 1,
             Behaviour.FAMILIAR: 0,
         },
     ).run(steps)
