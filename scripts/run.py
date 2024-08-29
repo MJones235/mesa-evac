@@ -20,6 +20,7 @@ def make_parser():
     parser.add_argument("--steps", type=int, default=100)
     parser.add_argument("--agents", type=int, default=2000)
     parser.add_argument("--novideo", action="store_true")
+    parser.add_argument("--openbrowser", action="store_true")
     return parser
 
 
@@ -29,7 +30,7 @@ def _get_bomb_location(city: str) -> Point:
     return st_james if city == "football" else monument
 
 
-def run_interactively(data_file_prefix: str) -> None:
+def run_interactively(data_file_prefix: str, open_browser: bool) -> None:
     model_params = {
         "city": data_file_prefix,
         "domain_path": f"data/{data_file_prefix}/domain.gpkg",
@@ -84,6 +85,8 @@ def run_interactively(data_file_prefix: str) -> None:
 
     map_element = mg.visualization.MapModule(agent_draw, map_height=600, map_width=600)
 
+    port = int(os.getenv("PORT", 4200))
+
     server = mesa.visualization.ModularServer(
         EvacuationModel,
         [map_element, clock_element, number_evacuated_element],
@@ -91,7 +94,7 @@ def run_interactively(data_file_prefix: str) -> None:
         model_params,
     )
 
-    server.launch()
+    server.launch(port=port, open_browser=open_browser)
 
 
 def run_and_generate_video(
@@ -145,6 +148,6 @@ if __name__ == "__main__":
         )
 
     if args.interactive:
-        run_interactively(data_file_prefix)
+        run_interactively(data_file_prefix, args.openbrowser)
     else:
         run_and_generate_video(data_file_prefix, args.steps, args.agents, args.novideo)

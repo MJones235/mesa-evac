@@ -358,7 +358,7 @@ def plot_density(output_path: str):
     df["y"] = df.apply(lambda row: row.location.y, axis=1)
 
     evac_zone_df = gpd.GeoDataFrame(
-        [{"geometry": Point(424317.8, 564626.7).buffer(x)} for x in [100, 200, 400]]
+        [{"geometry": Point(424860, 564443).buffer(x)} for x in [100, 200, 400]]
     ).set_crs("EPSG:27700")
 
     sns.kdeplot(

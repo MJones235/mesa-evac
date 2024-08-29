@@ -21,4 +21,4 @@ From the root of the projecy
 
 ## Run interactively
 
-`python3 scripts/run.py --city newcastle-sm --interactive`
+`python3 scripts/run.py --city newcastle-sm --interactive --openbrowser`
