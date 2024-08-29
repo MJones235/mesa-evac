@@ -1,0 +1,8 @@
+osmnx
+matplotlib
+sphinx
+python-igraph
+geopandas
+pointpats
+mesa
+mesa-geo
