@@ -1,5 +1,13 @@
 {
   "name": "Mesa Evacuation Model",
   "description": "An agent-based model for evacuation simulation in bomb threat scenarios",
-  "repository": "https://github.com/MJones235/mesa-evac"
+  "repository": "https://github.com/MJones235/mesa-evac",
+  "buildpacks": [
+    {
+      "url": "https://github.com/heroku/heroku-buildpack-python"
+    },
+    {
+      "url": "heroku/python"
+    }
+  ]
 }
