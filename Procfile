@@ -1,1 +1,1 @@
-web: python scripts/run.py --city newcastle-md --interactive -p=$PORT
+web: python scripts/run.py --city newcastle-md --interactive 
