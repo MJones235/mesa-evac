@@ -3,6 +3,8 @@ matplotlib
 sphinx
 python-igraph
 geopandas
+ffmpeg
 pointpats
+seaborn
 mesa
 mesa-geo
