@@ -1,0 +1,5 @@
+{
+  "name": "Mesa Evacuation Model",
+  "description": "An agent-based model for evacuation simulation in bomb threat scenarios",
+  "repository": "https://github.com/MJones235/mesa-evac"
+}
