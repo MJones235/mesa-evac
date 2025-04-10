@@ -23,7 +23,7 @@ class CreatePlotsTest(TestCase):
     def test_plot_density(self):
         plot_density(self.output_path)
 
-    batch_path = "outputs/batch-20240807193506"
+    batch_path = "outputs/batch-20250410093525"
 
     def plot_number_agents_against_evacuation_zone_size(self):
         plot_number_agents_against_evacuation_zone_size(self.batch_path)
@@ -48,4 +48,4 @@ class CreatePlotsTest(TestCase):
 
 
 if __name__ == "__main__":
-    CreatePlotsTest().test_plot_density()
+    CreatePlotsTest().plot_agents_against_behaviour()

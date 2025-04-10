@@ -307,7 +307,7 @@ def plot_agents_against_behaviour(
         xlabel=f"Proportion of agents displaying {_get_behaviour_text(independent_variable)} behaviour"
     )
     g.set(ylabel="Number of people")
-    plt.ylim((0, 380))
+    # plt.ylim((0, 380))
     g.legend.set_title("")
     for t, l in zip(
         g.legend.texts,

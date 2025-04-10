@@ -288,7 +288,7 @@ class Evacuee(mg.GeoAgent):
             time_to_travel = self.model.TIMESTEP.seconds
 
             # agent is on the last leg of their journey
-            if self.route_index == len(self.route) - 1 or len(self.route) < 2:
+            if self.route_index >= len(self.route) - 1:
                 self._arrive_at_destination()
                 return
 
@@ -335,7 +335,7 @@ class Evacuee(mg.GeoAgent):
                         )
                     ):
                         self._divert()
-                        if self.route is None or len(self.route) < 2:
+                        if self.route is None:
                             self.status = "parked"
                             self.leave_time = self.model.simulation_time.time()
                             return
@@ -348,7 +348,7 @@ class Evacuee(mg.GeoAgent):
                     self._report_to_traffic_sensors("just incremented")
 
                     # if target is reached
-                    if self.route_index == len(self.route) - 1:
+                    if self.route_index >= len(self.route) - 1:
                         self._arrive_at_destination()
                         return
 
@@ -410,14 +410,7 @@ class Evacuee(mg.GeoAgent):
 
         if self.route is None or len(self.route) < 2:
             self.status = "parked"
-            self.route = None
             self.leave_time = self.model.simulation_time.time()
-
-            if self.route is not None and len(self.route) == 1:
-                self.model.space.move_evacuee(
-                    self,
-                    self.roads.get_coords_from_idx(self.route[0]),
-                )
         else:
             self.model.space.move_evacuee(
                 self,

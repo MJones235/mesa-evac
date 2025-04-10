@@ -34,7 +34,6 @@ if __name__ == "__main__":
 
     # variable parameter
     variable_name = "agent_behaviour"
-    """
     variable_values = [
         {
             Behaviour.NON_COMPLIANT: 0,
@@ -43,28 +42,6 @@ if __name__ == "__main__":
             Behaviour.FAMILIAR: 0,
         }
         for x in range(0, 11)
-    ]
-    """
-
-    variable_values = [
-        {
-            Behaviour.NON_COMPLIANT: 0,
-            Behaviour.COMPLIANT: 1,
-            Behaviour.CURIOUS: 0,
-            Behaviour.FAMILIAR: 0,
-        },
-        {
-            Behaviour.NON_COMPLIANT: 0,
-            Behaviour.COMPLIANT: 0.5,
-            Behaviour.CURIOUS: 0.5,
-            Behaviour.FAMILIAR: 0,
-        },
-        {
-            Behaviour.NON_COMPLIANT: 0,
-            Behaviour.COMPLIANT: 0,
-            Behaviour.CURIOUS: 1,
-            Behaviour.FAMILIAR: 0,
-        },
     ]
 
     if not os.path.exists(batch_output_path):
@@ -119,7 +96,7 @@ if __name__ == "__main__":
             evacuate_on_foot=True,
             sensor_locations=[],
             agent_behaviour=variable_value,
-        ).run(150)
+        ).run(210)
 
         end_time = time.time()
 

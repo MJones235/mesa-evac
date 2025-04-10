@@ -92,3 +92,5 @@ def create_video(output_path: str) -> None:
                 ax.set_title("T={}".format(model_df.iloc[step].time_elapsed))
 
             writer.grab_frame()
+
+
