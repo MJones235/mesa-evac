@@ -9,32 +9,63 @@ import csv
 import concurrent.futures
 
 if __name__ == "__main__":
-    n_runs = 50
+    n_runs = 20
 
-    data_file_prefix = "newcastle-md"
+    data_file_prefix = "football"
     current_time = datetime.fromtimestamp(time.time()).strftime("%Y%m%d%H%M%S")
     batch_output_path = f"outputs/batch-{current_time}"
 
     # fixed parameters
-    # num_agents = 2000
-    bomb_location = Point(424860, 564443)
-    evacuation_start_h = 8
-    evacuation_start_m = 0
-    simulation_start_h = 8
-    simulation_start_m = 0
+    num_agents = 2000
+    bomb_location = Point(424388, 564639)
+    evacuation_start_h = 15
+    evacuation_start_m = 30
+    simulation_start_h = 15
+    simulation_start_m = 30
     mean_evacuation_delay_m = 5
-    car_use_pc = 50
+    car_use_pc = 0
     evacuation_zone_radius = 500
-    agent_behaviour = {
-        Behaviour.NON_COMPLIANT: 0,
-        Behaviour.COMPLIANT: 1,
-        Behaviour.CURIOUS: 0,
-        Behaviour.FAMILIAR: 0,
-    }
+    # agent_behaviour = {
+    #    Behaviour.NON_COMPLIANT: 0,
+    #    Behaviour.COMPLIANT: 1,
+    #    Behaviour.CURIOUS: 0,
+    #    Behaviour.FAMILIAR: 0,
+    # }
 
     # variable parameter
-    variable_name = "num_agents"
-    variable_values = [ 100, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000 ]
+    variable_name = "agent_behaviour"
+    """
+    variable_values = [
+        {
+            Behaviour.NON_COMPLIANT: 0,
+            Behaviour.COMPLIANT: round(1 - x / 10.0, 1),
+            Behaviour.CURIOUS: round(x / 10.0, 1),
+            Behaviour.FAMILIAR: 0,
+        }
+        for x in range(0, 11)
+    ]
+    """
+
+    variable_values = [
+        {
+            Behaviour.NON_COMPLIANT: 0,
+            Behaviour.COMPLIANT: 1,
+            Behaviour.CURIOUS: 0,
+            Behaviour.FAMILIAR: 0,
+        },
+        {
+            Behaviour.NON_COMPLIANT: 0,
+            Behaviour.COMPLIANT: 0.5,
+            Behaviour.CURIOUS: 0.5,
+            Behaviour.FAMILIAR: 0,
+        },
+        {
+            Behaviour.NON_COMPLIANT: 0,
+            Behaviour.COMPLIANT: 0,
+            Behaviour.CURIOUS: 1,
+            Behaviour.FAMILIAR: 0,
+        },
+    ]
 
     if not os.path.exists(batch_output_path):
         os.makedirs(batch_output_path)
@@ -75,7 +106,7 @@ if __name__ == "__main__":
             city=data_file_prefix,
             domain_path=f"data/{data_file_prefix}/domain.gpkg",
             agent_data_path=f"data/{data_file_prefix}/agent_data.csv",
-            num_agents=variable_value,
+            num_agents=num_agents,
             bomb_location=bomb_location,
             evacuation_zone_radius=evacuation_zone_radius,
             evacuation_start_h=evacuation_start_h,
@@ -87,7 +118,7 @@ if __name__ == "__main__":
             car_use_pc=car_use_pc,
             evacuate_on_foot=True,
             sensor_locations=[],
-            agent_behaviour=agent_behaviour,
+            agent_behaviour=variable_value,
         ).run(150)
 
         end_time = time.time()
@@ -101,7 +132,7 @@ if __name__ == "__main__":
                     n,
                     end_time - start_time,
                     data_file_prefix,
-                    variable_value,
+                    num_agents,
                     bomb_location,
                     evacuation_zone_radius,
                     evacuation_start_h,
@@ -111,10 +142,10 @@ if __name__ == "__main__":
                     output_path,
                     mean_evacuation_delay_m,
                     car_use_pc,
-                    agent_behaviour[Behaviour.NON_COMPLIANT],
-                    agent_behaviour[Behaviour.COMPLIANT],
-                    agent_behaviour[Behaviour.CURIOUS],
-                    agent_behaviour[Behaviour.FAMILIAR],
+                    variable_value[Behaviour.NON_COMPLIANT],
+                    variable_value[Behaviour.COMPLIANT],
+                    variable_value[Behaviour.CURIOUS],
+                    variable_value[Behaviour.FAMILIAR],
                 ]
             )
 
