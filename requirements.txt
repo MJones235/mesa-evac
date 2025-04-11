@@ -1,4 +1,4 @@
-geopandas==0.14.4
+geopandas
 matplotlib==3.8.4
 Mesa==2.1
 Mesa_Geo==0.7.1

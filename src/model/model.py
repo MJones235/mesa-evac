@@ -8,6 +8,7 @@ from geopandas import GeoDataFrame
 import uuid
 import random
 from datetime import datetime, timedelta, time, date
+import numpy as np
 
 from src.agent.building import (
     Building,
@@ -314,6 +315,7 @@ class EvacuationModel(mesa.Model):
     def _write_output_files(self):
         output_gml = self.output_path + ".gml"
         graph = compose(self.roads_walk.nx_graph, self.roads_drive.nx_graph)
+        cast_graph_attributes_to_builtin_types(graph)
         write_gml(graph, path=output_gml, stringizer=lambda x: str(x))
 
         output_gpkg = self.output_path + ".gpkg"
@@ -344,3 +346,14 @@ def number_evacuated(model: EvacuationModel):
 
 def number_to_evacuate(model: EvacuationModel):
     return len([agent for agent in model.space.evacuees if agent.requires_evacuation])
+
+def cast_graph_attributes_to_builtin_types(G):
+    for _, data in G.nodes(data=True):
+        for key, val in data.items():
+            if isinstance(val, (np.generic, np.ndarray)):
+                data[key] = val.item()  # cast to Python float/int
+
+    for _, _, data in G.edges(data=True):
+        for key, val in data.items():
+            if isinstance(val, (np.generic, np.ndarray)):
+                data[key] = val.item()

@@ -9,7 +9,7 @@ import csv
 import concurrent.futures
 
 if __name__ == "__main__":
-    n_runs = 20
+    n_runs = 50
 
     data_file_prefix = "football"
     current_time = datetime.fromtimestamp(time.time()).strftime("%Y%m%d%H%M%S")
