@@ -5,7 +5,7 @@ import os
 
 # === CONFIG: Metadata paths per behaviour type ===
 metadata_files = {
-    "Curiosity": "outputs/batch-20250411102536/metadata.csv",
+    "Curiosity": "outputs/batch-20250411103815/metadata.csv",
     "Social Attachment": "outputs/batch-20250411044617/metadata.csv",
     "Non-Compliance": "outputs/batch-20250411044617/metadata.csv",
 }

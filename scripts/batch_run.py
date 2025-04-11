@@ -16,7 +16,7 @@ if __name__ == "__main__":
     batch_output_path = f"outputs/batch-{current_time}"
 
     # fixed parameters
-    num_agents = 2000
+    num_agents = 4000
     bomb_location = Point(424388, 564639)
     evacuation_start_h = 15
     evacuation_start_m = 30
@@ -38,8 +38,8 @@ if __name__ == "__main__":
         {
             Behaviour.NON_COMPLIANT: 0,
             Behaviour.COMPLIANT: round(1 - x / 10.0, 1),
-            Behaviour.CURIOUS: round(x / 10.0, 1),
-            Behaviour.FAMILIAR: 0,
+            Behaviour.CURIOUS: 0,
+            Behaviour.FAMILIAR: round(x / 10.0, 1),
         }
         for x in range(0, 11)
     ]
