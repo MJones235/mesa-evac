@@ -5,9 +5,9 @@ import os
 
 # === CONFIG: Metadata paths per behaviour type ===
 metadata_files = {
-    "Curiosity": "outputs/batch-20250411103815/metadata.csv",
-    "Social Attachment": "outputs/batch-20250411044617/metadata.csv",
-    "Non-Compliance": "outputs/batch-20250411044617/metadata.csv",
+    "Curiosity": "outputs/batch-20250411234245/metadata.csv",
+    "Social Attachment": "outputs/batch-20250411160316/metadata.csv",
+    "Non-Compliance": "outputs/batch-20250412233224/metadata.csv",
 }
 
 def get_summary_stats(metadata_path):
@@ -70,7 +70,7 @@ handles, labels = plt.gca().get_legend_handles_labels()
 handles.append(ci_patch)
 labels.append("95% Confidence Interval")
 
-plt.legend(handles=handles, labels=labels, title="Contrasting Behaviour", fontsize=13, title_fontsize=14)
+plt.legend(handles=handles, labels=labels, title="Contrasting Behaviour", fontsize=13, title_fontsize=14, loc="lower right")
 
 
 plt.xlabel("Compliant Behaviour (% of Population)", fontsize=16)

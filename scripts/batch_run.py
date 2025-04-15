@@ -36,10 +36,10 @@ if __name__ == "__main__":
     variable_name = "agent_behaviour"
     variable_values = [
         {
-            Behaviour.NON_COMPLIANT: 0,
+            Behaviour.NON_COMPLIANT: round(x / 10.0, 1),
             Behaviour.COMPLIANT: round(1 - x / 10.0, 1),
             Behaviour.CURIOUS: 0,
-            Behaviour.FAMILIAR: round(x / 10.0, 1),
+            Behaviour.FAMILIAR: 0,
         }
         for x in range(0, 11)
     ]
