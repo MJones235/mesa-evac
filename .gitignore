@@ -2,3 +2,4 @@ cache
 outputs
 __pycache__/
 venv
+.venv

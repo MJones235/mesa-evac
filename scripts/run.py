@@ -26,7 +26,7 @@ def make_parser():
 
 def _get_bomb_location(city: str) -> Point:
     monument = Point(424860, 564443)
-    st_james = Point(424317.8, 564626.7)
+    st_james = Point(424192, 564602)
     return st_james if city == "football" else monument
 
 

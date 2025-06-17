@@ -8,18 +8,18 @@ from matplotlib.patches import Patch
 from matplotlib_scalebar.scalebar import ScaleBar
 
 # === INPUT PATHS ===
-agent_file = "outputs/newcastle-md/20250410184910/20250410184910.agent.csv"
-gpkg_file = "outputs/newcastle-md/20250410184910/20250410184910.gpkg"
+#agent_file = "outputs/newcastle-md/20250412234447/20250412234447.agent.csv"
+#gpkg_file = "outputs/newcastle-md/20250412234447/20250412234447.gpkg"
 
-#agent_file = "outputs/football/20250410185730/20250410185730.agent.csv"
-#gpkg_file = "outputs/football/20250410185730/20250410185730.gpkg"
+agent_file = "outputs/football/20250410185730/20250410185730.agent.csv"
+gpkg_file = "outputs/football/20250613211514/20250613211514.gpkg"
 
 
-output_image = "initial_map_monument.png"  # Output image file
+output_image = "initial_map_st_james.png"  # Output image file
 
 # === COLOUR SCHEME ===
 agent_color = "green"
-bomb_color = "#E15759"
+bomb_color = "yellow"
 zone_fill = "blue"
 zone_edge = "navy"
 
@@ -63,7 +63,7 @@ bomb_gdf.plot(
 
 
 # Add basemap
-ctx.add_basemap(ax, crs=gdf_step0.crs.to_string(), source=ctx.providers.OpenStreetMap.Mapnik, zoom=17)
+ctx.add_basemap(ax, crs=gdf_step0.crs.to_string(), source=ctx.providers.CartoDB.Positron, zoom=17)
 
 # Style
 ax.set_axis_off()

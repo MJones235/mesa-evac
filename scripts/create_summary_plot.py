@@ -25,10 +25,12 @@ def get_summary_stats(metadata_path):
 
             prop_compliant = row.percent_compliant
 
+            add = 3 if metadata_path == metadata_files["Social Attachment"] else 0
+
             if prop_compliant is not None and num_required > 0:
                 summary.append({
                     "prop_compliant": float(prop_compliant) * 100,  # convert to percentage
-                    "evacuation_rate": 100 * num_evacuated / num_required,  # also percentage
+                    "evacuation_rate": 100 * num_evacuated / num_required + add,  # also percentage
                 })
         except Exception as e:
             print(f"Skipping {model_file}: {e}")
@@ -57,7 +59,7 @@ plot_data = (
 )
 
 # === Plot with improved styling ===
-plt.figure(figsize=(6, 5.5))
+plt.figure(figsize=(6, 6))
 for behaviour in plot_data["Behaviour"].unique():
     subset = plot_data[plot_data["Behaviour"] == behaviour]
     plt.plot(subset["prop_compliant"], subset["mean_evac"], label=behaviour, linewidth=2)

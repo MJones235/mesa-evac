@@ -48,4 +48,4 @@ class CreatePlotsTest(TestCase):
 
 
 if __name__ == "__main__":
-    CreatePlotsTest().plot_agents_against_behaviour()
+    CreatePlotsTest().plot_rayleigh_dist()
