@@ -15,9 +15,14 @@ if __name__ == "__main__":
     current_time = datetime.fromtimestamp(time.time()).strftime("%Y%m%d%H%M%S")
     batch_output_path = f"outputs/batch-{current_time}"
 
+    def _get_bomb_location(city: str) -> Point:
+        monument = Point(424860, 564443)
+        st_james = Point(424192, 564602)
+        return st_james if city == "football" else monument
+
     # fixed parameters
     num_agents = 4000
-    bomb_location = Point(424388, 564639)
+    bomb_location = _get_bomb_location(data_file_prefix)
     evacuation_start_h = 15
     evacuation_start_m = 30
     simulation_start_h = 15
@@ -25,24 +30,17 @@ if __name__ == "__main__":
     mean_evacuation_delay_m = 5
     car_use_pc = 0
     evacuation_zone_radius = 500
-    # agent_behaviour = {
-    #    Behaviour.NON_COMPLIANT: 0,
-    #    Behaviour.COMPLIANT: 1,
-    #    Behaviour.CURIOUS: 0,
-    #    Behaviour.FAMILIAR: 0,
-    # }
+    # curiosity_radius_m = 200
+    agent_behaviour = {
+        Behaviour.NON_COMPLIANT: 0,
+        Behaviour.COMPLIANT: 0,
+        Behaviour.CURIOUS: 1,
+        Behaviour.FAMILIAR: 0,
+    }
 
     # variable parameter
-    variable_name = "agent_behaviour"
-    variable_values = [
-        {
-            Behaviour.NON_COMPLIANT: round(x / 10.0, 1),
-            Behaviour.COMPLIANT: round(1 - x / 10.0, 1),
-            Behaviour.CURIOUS: 0,
-            Behaviour.FAMILIAR: 0,
-        }
-        for x in range(0, 11)
-    ]
+    variable_name = "curiosity_radius_m"
+    variable_values = [ 50, 100, 150, 200, 250, 300, 350, 400, 450, 500 ]
 
     if not os.path.exists(batch_output_path):
         os.makedirs(batch_output_path)
@@ -68,6 +66,7 @@ if __name__ == "__main__":
                 "percent_compliant",
                 "percent_curious",
                 "percent_familiar",
+                "curiosity_radius_m"
             ]
         )
 
@@ -95,8 +94,9 @@ if __name__ == "__main__":
             car_use_pc=car_use_pc,
             evacuate_on_foot=True,
             sensor_locations=[],
-            agent_behaviour=variable_value,
-        ).run(210)
+            agent_behaviour=agent_behaviour,
+            curiosity_radius_m = variable_value
+        ).run(150)
 
         end_time = time.time()
 
@@ -119,10 +119,11 @@ if __name__ == "__main__":
                     output_path,
                     mean_evacuation_delay_m,
                     car_use_pc,
-                    variable_value[Behaviour.NON_COMPLIANT],
-                    variable_value[Behaviour.COMPLIANT],
-                    variable_value[Behaviour.CURIOUS],
-                    variable_value[Behaviour.FAMILIAR],
+                    agent_behaviour[Behaviour.NON_COMPLIANT],
+                    agent_behaviour[Behaviour.COMPLIANT],
+                    agent_behaviour[Behaviour.CURIOUS],
+                    agent_behaviour[Behaviour.FAMILIAR],
+                    variable_value
                 ]
             )
 

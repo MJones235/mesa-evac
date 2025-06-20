@@ -2,7 +2,7 @@ import pandas as pd
 import os
 
 # ---------------- CONFIGURATION ---------------- #
-BATCH_PATH = "outputs/batch-20250411234245"
+BATCH_PATH = "outputs/batch-20250618194302"
 METADATA_FILE = os.path.join(BATCH_PATH, "metadata.csv")
 CITY_FILTER = "football"
 # ------------------------------------------------ #
@@ -13,6 +13,8 @@ df = metadata[
     (metadata["city"] == CITY_FILTER) &
     (metadata["percent_compliant"] == 1.0)
 ]
+
+print(df)
 
 # Function to compute time to reach X% evacuated
 def time_to_threshold(filepath, threshold=0.90):

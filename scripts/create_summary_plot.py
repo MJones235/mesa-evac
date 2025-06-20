@@ -5,9 +5,9 @@ import os
 
 # === CONFIG: Metadata paths per behaviour type ===
 metadata_files = {
-    "Curiosity": "outputs/batch-20250411234245/metadata.csv",
-    "Social Attachment": "outputs/batch-20250411160316/metadata.csv",
-    "Non-Compliance": "outputs/batch-20250412233224/metadata.csv",
+    "Curiosity": "outputs/batch-20250617235523/metadata.csv",
+    "Social Attachment": "outputs/batch-20250618121242/metadata.csv",
+    "Non-Compliance": "outputs/batch-20250618194302/metadata.csv",
 }
 
 def get_summary_stats(metadata_path):
@@ -25,12 +25,11 @@ def get_summary_stats(metadata_path):
 
             prop_compliant = row.percent_compliant
 
-            add = 3 if metadata_path == metadata_files["Social Attachment"] else 0
 
             if prop_compliant is not None and num_required > 0:
                 summary.append({
                     "prop_compliant": float(prop_compliant) * 100,  # convert to percentage
-                    "evacuation_rate": 100 * num_evacuated / num_required + add,  # also percentage
+                    "evacuation_rate": 100 * num_evacuated / num_required
                 })
         except Exception as e:
             print(f"Skipping {model_file}: {e}")

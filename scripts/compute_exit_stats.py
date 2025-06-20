@@ -8,9 +8,9 @@ import networkx as nx
 import osmnx as ox
 
 # ---------------- CONFIGURATION ---------------- #
-agent_file = "outputs/newcastle-md/20250412234447/20250412234447.agent.csv"
-gpkg_file = "outputs/newcastle-md/20250412234447/20250412234447.gpkg"
-gml_file = "outputs/newcastle-md/20250412234447/20250412234447.gml"
+agent_file = "outputs/batch-20250617210608/mean_evacuation_delay_m-5-run-0/mean_evacuation_delay_m-5-run-0.agent.csv"
+gpkg_file = "outputs/batch-20250617210608/mean_evacuation_delay_m-5-run-0/mean_evacuation_delay_m-5-run-0.gpkg"
+gml_file = "outputs/batch-20250617210608/mean_evacuation_delay_m-5-run-0/mean_evacuation_delay_m-5-run-0.gml"
 
 crs_epsg = "EPSG:27700"
 # ------------------------------------------------ #

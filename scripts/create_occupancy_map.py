@@ -19,9 +19,9 @@ scenarios = {
         "gml_file": "outputs/newcastle-md/20250412234447/20250412234447.gml"
     },
     "St James' Park": {
-        "agent_file": "outputs/batch-20250411234245/agent_behaviour-{<Behaviour.NON_COMPLIANT: 2>: 0, <Behaviour.COMPLIANT: 1>: 1.0, <Behaviour.CURIOUS: 3>: 0.0, <Behaviour.FAMILIAR: 4>: 0}-run-49/agent_behaviour-{<Behaviour.NON_COMPLIANT: 2>: 0, <Behaviour.COMPLIANT: 1>: 1.0, <Behaviour.CURIOUS: 3>: 0.0, <Behaviour.FAMILIAR: 4>: 0}-run-49.agent.csv",
-        "gpkg_file": "outputs/batch-20250411234245/agent_behaviour-{<Behaviour.NON_COMPLIANT: 2>: 0, <Behaviour.COMPLIANT: 1>: 1.0, <Behaviour.CURIOUS: 3>: 0.0, <Behaviour.FAMILIAR: 4>: 0}-run-49/agent_behaviour-{<Behaviour.NON_COMPLIANT: 2>: 0, <Behaviour.COMPLIANT: 1>: 1.0, <Behaviour.CURIOUS: 3>: 0.0, <Behaviour.FAMILIAR: 4>: 0}-run-49.gpkg",
-        "gml_file": "outputs/batch-20250411234245/agent_behaviour-{<Behaviour.NON_COMPLIANT: 2>: 0, <Behaviour.COMPLIANT: 1>: 1.0, <Behaviour.CURIOUS: 3>: 0.0, <Behaviour.FAMILIAR: 4>: 0}-run-49/agent_behaviour-{<Behaviour.NON_COMPLIANT: 2>: 0, <Behaviour.COMPLIANT: 1>: 1.0, <Behaviour.CURIOUS: 3>: 0.0, <Behaviour.FAMILIAR: 4>: 0}-run-49.gml"
+        "agent_file": "outputs/batch-20250617210608/mean_evacuation_delay_m-5-run-0/mean_evacuation_delay_m-5-run-0.agent.csv",
+        "gpkg_file": "outputs/batch-20250617210608/mean_evacuation_delay_m-5-run-0/mean_evacuation_delay_m-5-run-0.gpkg",
+        "gml_file": "outputs/batch-20250617210608/mean_evacuation_delay_m-5-run-0/mean_evacuation_delay_m-5-run-0.gml"
     }
 }
 time_steps = [0, 48, 96]  # e.g. 0 and 800s if 10s timestep

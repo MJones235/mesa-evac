@@ -70,6 +70,8 @@ class Evacuee(mg.GeoAgent):
     diverted = False
     status = ""
 
+    curiosity_radius_m = 200
+
     previous_osmid = None
     behaviour: Behaviour | None = None
 
@@ -86,6 +88,7 @@ class Evacuee(mg.GeoAgent):
         car_use_pc,
         evacuate_on_foot,
         behaviour,
+        curiosity_radius_m
     ) -> None:
         self.model = model
         self.home = home
@@ -95,6 +98,7 @@ class Evacuee(mg.GeoAgent):
         self.walking_speed = self.model.agent_data.iloc[category].walking_speed
         self.in_car = random.choices([True, False], [car_use_pc, 100 - car_use_pc])[0]
         self.behaviour = behaviour
+        self.curiosity_radius_m = curiosity_radius_m
         self._set_schedule()
         geometry = self._initialise_position()
 
@@ -117,7 +121,7 @@ class Evacuee(mg.GeoAgent):
             self.behaviour is Behaviour.CURIOUS
             and self.model.evacuating
             and not self.in_car
-            and self.model.space.evacuation_zone.centre.buffer(200).contains(
+            and self.model.space.evacuation_zone.centre.buffer(self.curiosity_radius_m).contains(
                 Point(self.geometry.x, self.geometry.y)
             )
         ):

@@ -78,6 +78,7 @@ class EvacuationModel(mesa.Model):
         evacuate_on_foot: bool = True,
         sensor_locations: list[Point] = [],
         agent_behaviour: dict[Behaviour, float] | None = None,
+        curiosity_radius_m: int = 200
     ) -> None:
         super().__init__()
         self.city = city
@@ -102,7 +103,7 @@ class EvacuationModel(mesa.Model):
             date_today, time(hour=evacuation_start_h, minute=evacuation_start_m)
         )
 
-        self._create_evacuees(mean_evacuation_delay_m, car_use_pc, evacuate_on_foot)
+        self._create_evacuees(mean_evacuation_delay_m, car_use_pc, evacuate_on_foot, curiosity_radius_m)
         self.datacollector = mesa.DataCollector(
             model_reporters={
                 "evacuation_started": get_is_evacuation_started,
@@ -243,7 +244,7 @@ class EvacuationModel(mesa.Model):
             )
 
     def _create_evacuees(
-        self, mean_evacuation_delay_m: int, car_use_pc: int, evacuate_on_foot: bool
+        self, mean_evacuation_delay_m: int, car_use_pc: int, evacuate_on_foot: bool, curiosity_radius_m: int
     ) -> None:
         for _ in range(self.num_agents):
             random_home = self.space.get_random_home()
@@ -267,6 +268,7 @@ class EvacuationModel(mesa.Model):
                     list(self.agent_behaviour.keys()),
                     list(self.agent_behaviour.values()),
                 )[0],
+                curiosity_radius_m=curiosity_radius_m
             )
 
             self.space.add_evacuee(evacuee)
